@@ -169,7 +169,6 @@ private:
   
   TFile * file;
   std::string outfile;
-  bool kinevtx;
   bool redovtx;
   bool hitassoc;
   double minPhoPtForEffic;
@@ -207,7 +206,6 @@ private:
 //
 ConversionNtuplizer::ConversionNtuplizer(const edm::ParameterSet& iConfig) :
   outfile(iConfig.getParameter<std::string>("outfile")),
-  kinevtx(iConfig.getParameter<bool>("kinevtx")),
   redovtx(iConfig.getParameter<bool>("redovtx")),
   hitassoc(iConfig.getParameter<bool>("hitassoc")),
   minPhoPtForEffic(iConfig.getParameter<double>("minPhoPtForEffic")),
@@ -499,36 +497,32 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     const TransientTrack tt1 = (*theB).build(tk1);
     const TransientTrack tt2 = (*theB).build(tk2);
     KinematicVertex tv;
+    bool validVtx=false;
     if (redovtx) {
       if (prints) cout << "make vtx" << endl;
-      if (kinevtx){
-	float sigma = 0.00000000001;
-	allParticles.push_back(pFactory.particle (tt1,elecMass,0.,0.,sigma));
-	allParticles.push_back(pFactory.particle (tt2,elecMass,0.,0.,sigma));
-	MultiTrackKinematicConstraint * colinearConstr = new  ColinearityKinematicConstraint(ColinearityKinematicConstraint::PhiTheta);
-	RefCountedKinematicTree myTree = fitter.fit(allParticles, colinearConstr);
-	if (myTree->isEmpty()) continue;
-	tv = *(myTree->currentDecayVertex());
-      } else {
-	vector<TransientTrack> t_tks;
-	t_tks.push_back(tt1);
-	t_tks.push_back(tt2);
-	TransientVertex tv2 = fitterKalm.vertex(t_tks);
-	if (tv2.isValid()==0) continue;
-	tv = KinematicVertex(tv2.vertexState(),tv2.totalChiSquared(),tv2.degreesOfFreedom());
-      }
+      float sigma = 0.00000000001;
+      allParticles.push_back(pFactory.particle (tt1,elecMass,0.,0.,sigma));
+      allParticles.push_back(pFactory.particle (tt2,elecMass,0.,0.,sigma));
+      MultiTrackKinematicConstraint * colinearConstr = new  ColinearityKinematicConstraint(ColinearityKinematicConstraint::PhiTheta);
+      RefCountedKinematicTree myTree = fitter.fit(allParticles, colinearConstr);
+      if (myTree->isEmpty()) continue;
+      myTree->movePointerToTheTop();
+      tv = *(myTree->currentDecayVertex());
+      validVtx = tv.vertexIsValid();
     } else {
-      vector<TransientTrack> t_tks;
+      vector<reco::TransientTrack> t_tks;
       t_tks.push_back(tt1);
       t_tks.push_back(tt2);
-      GlobalPoint point(conv->conversionVertex().position().x(),conv->conversionVertex().position().y(),conv->conversionVertex().position().z());
-      GlobalError error(conv->conversionVertex().error()(0,0),conv->conversionVertex().error()(1,0),conv->conversionVertex().error()(1,1),
-			conv->conversionVertex().error()(2,2),conv->conversionVertex().error()(2,1),conv->conversionVertex().error()(2,2));
-      TransientVertex tv2(point, error, t_tks, conv->conversionVertex().chi2(),conv->conversionVertex().ndof());
-      tv = KinematicVertex(tv2.vertexState(),tv2.totalChiSquared(),tv2.degreesOfFreedom());
+      if ( conv->conversionVertex().isValid() ) {
+	GlobalPoint point(conv->conversionVertex().position().x(),conv->conversionVertex().position().y(),conv->conversionVertex().position().z());
+	GlobalError error(conv->conversionVertex().error()(0,0),conv->conversionVertex().error()(1,0),conv->conversionVertex().error()(1,1),
+			  conv->conversionVertex().error()(2,2),conv->conversionVertex().error()(2,1),conv->conversionVertex().error()(2,2));
+	TransientVertex tv2(point, error, t_tks, conv->conversionVertex().chi2(),conv->conversionVertex().ndof());
+	tv = KinematicVertex(tv2.vertexState(),tv2.totalChiSquared(),tv2.degreesOfFreedom());
+	validVtx = true;
+      }
     }
-    bool validVtx = tv.vertexIsValid();
-    if (validVtx==0) continue;
+    if (!validVtx) continue;
     if (prints) cout << "pushing vtx" << endl;
     conversionVertices.push_back(make_pair<unsigned int,KinematicVertex>(conv-pIn->begin(),tv));
     //if (prints) cout << "converted photon with valid vertex at R=" << tv.position().perp() 

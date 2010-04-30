@@ -27,8 +27,7 @@ process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
 
 process.conv = cms.EDAnalyzer('ConversionNtuplizer',
                               outfile = cms.string('ntuple_conversion_goodcoll7TeV.root'),
-                              kinevtx = cms.bool(True),
-                              redovtx = cms.bool(False),
+                              redovtx = cms.bool(True),
                               hitassoc = cms.bool(False),
                               minPhoPtForEffic = cms.double(0.3),#when hardcoded it was 2.5
                               maxPhoEtaForEffic = cms.double(2.5),
@@ -156,8 +155,8 @@ process.conversions.minSCEt =1.
 process.trackerOnlyConversions.AllowTrackBC = cms.bool(False)
 process.trackerOnlyConversions.AllowRightBC = cms.bool(False)
 process.trackerOnlyConversions.MinApproach = cms.double(-.25)
-process.trackerOnlyConversions.DeltaCotTheta = cms.double(.07)
-process.trackerOnlyConversions.DeltaPhi = cms.double(.2)
+process.trackerOnlyConversions.DeltaCotTheta = cms.double(0.1)
+process.trackerOnlyConversions.rCut = cms.double(2.)
 
 ###
 ###  end of top level replacements
