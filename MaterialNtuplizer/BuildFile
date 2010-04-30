@@ -1,0 +1,18 @@
+<use name=FWCore/Framework>
+<use name=FWCore/PluginManager>
+<use name=FWCore/ParameterSet>
+<flags EDM_PLUGIN=1>
+<export>
+   <lib name=TestsMaterialNtuplizer>
+   <use name=FWCore/Framework>
+   <use name=FWCore/PluginManager>
+   <use name=FWCore/ParameterSet>
+</export>
+<use name=DataFormats/EgammaCandidates>
+<use name=DataFormats/ParticleFlowReco>
+<use name=RecoVertex/KalmanVertexFit>
+<use name=RecoVertex/KinematicFit>
+<use name=RecoVertex/KinematicFitPrimitives>
+<use name=RecoEgamma/EgammaMCTools>
+<use name=SimTracker/Records>
+<use name=TrackingTools/MaterialEffects>
