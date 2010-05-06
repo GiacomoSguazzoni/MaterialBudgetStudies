@@ -582,16 +582,16 @@ void NuclIntNtuplizer::beginJob() {
   ntupleR2S->Branch("isLooper",&(r2sbranch.isLooper),"isLooper/B");
   ntupleR2S->Branch("isConvLoose",&(r2sbranch.isConvLoose),"isConvLoose/B");
 
-  ntupleR2S->Branch("tkPt",&(r2sbranch.tkPt),"tkPt");
-  ntupleR2S->Branch("tkEta",&(r2sbranch.tkEta),"tkEta");
-  ntupleR2S->Branch("tkDxy",&(r2sbranch.tkDxy),"tkDxy");
-  ntupleR2S->Branch("tkDz",&(r2sbranch.tkDz),"tkDz");
-  ntupleR2S->Branch("tkRho",&(r2sbranch.tkRho),"tkRho");
-  ntupleR2S->Branch("tkHits",&(r2sbranch.tkHits),"tkHits");
-  ntupleR2S->Branch("tkAlgo",&(r2sbranch.tkAlgo),"tkAlgo");
-  ntupleR2S->Branch("tkOuter",&(r2sbranch.tkOuter),"tkOuter");
-  ntupleR2S->Branch("tkPrimary",&(r2sbranch.tkPrimary),"tkPrimary");
-  ntupleR2S->Branch("tkSecondary",&(r2sbranch.tkSecondary),"tkSecondary");
+  ntupleR2S->Branch("tkPt",&(r2sbranch.tkPt));
+  ntupleR2S->Branch("tkEta",&(r2sbranch.tkEta));
+  ntupleR2S->Branch("tkDxy",&(r2sbranch.tkDxy));
+  ntupleR2S->Branch("tkDz",&(r2sbranch.tkDz));
+  ntupleR2S->Branch("tkRho",&(r2sbranch.tkRho));
+  ntupleR2S->Branch("tkHits",&(r2sbranch.tkHits));
+  ntupleR2S->Branch("tkAlgo",&(r2sbranch.tkAlgo));
+  ntupleR2S->Branch("tkOuter",&(r2sbranch.tkOuter));
+  ntupleR2S->Branch("tkPrimary",&(r2sbranch.tkPrimary));
+  ntupleR2S->Branch("tkSecondary",&(r2sbranch.tkSecondary));
   
   TH1::AddDirectory(oldAddDir);
 }
