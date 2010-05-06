@@ -16,6 +16,8 @@ process.load("Configuration.StandardSequences.Reconstruction_cff")
 process.load("RecoParticleFlow.PFTracking.particleFlowDisplacedVertexCandidate_cff")
 process.load("RecoParticleFlow.PFTracking.particleFlowDisplacedVertex_cff")
 
+process.load("SimTracker.TrackAssociation.TrackAssociatorByHits_cfi");
+
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 source = cms.Source ("PoolSource",fileNames = readFiles, secondaryFileNames = secFiles)
@@ -52,6 +54,8 @@ process.conv = cms.EDAnalyzer('ConversionNtuplizer',
                               prints = cms.bool(False)
 )
 
+process.convHit = process.conv.clone(outfile = cms.string('ntuple_conversion_minbias7TeV_relval_hit.root'),hitassoc = cms.bool(True))
+
 process.nucl = cms.EDAnalyzer('NuclIntNtuplizer',
                               outfile = cms.string('ntuple_nuclint_minbias7TeV_relval.root'),
                               hitassoc = cms.bool(False),
@@ -82,7 +86,7 @@ process.disp = cms.Sequence(
     )
 
 process.default = cms.Sequence(process.siPixelRecHits*process.siStripMatchedRecHits*process.ckftracks_wodEdX*
-                               process.trackerOnlyConversionSequence*process.disp*process.conv*process.nucl)
+                               process.trackerOnlyConversionSequence*process.disp*process.conv*process.convHit*process.nucl)
 
 process.p = cms.Path(process.bit40*process.noScraping*process.oneGoodVertexFilter*process.default)
 
