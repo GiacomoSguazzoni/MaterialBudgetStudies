@@ -14,7 +14,7 @@
 // Original Author:  Giuseppe Cerati
 // reorganized by:   Domenico Giordano
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NewConversionNtuplizer.cc,v 1.2 2010/04/30 13:49:37 cerati Exp $
+// $Id: NewConversionNtuplizer.cc,v 1.1 2010/05/03 21:36:43 giordano Exp $
 //
 //
 
@@ -160,7 +160,6 @@ typedef struct {
   float deltapt, deltaphi, deltatheta, deltax, deltay, deltaz;
   float minapp, chi2;
   float chi2prob;
-  float distMinApproach;
   int   refit;
   float tx, ty, tz;//track analytical X
 
@@ -170,7 +169,6 @@ typedef struct {
     deltapt=-999; deltaphi=-999; deltatheta=-999; deltax=-999; deltay=-999; deltaz=-999;
     minapp=-999; chi2=-999;
     chi2prob=-999;
-    distMinApproach=-999;
     refit=-999;
     tx=-999; ty=-999; tz=-999;//track analytical X  
   }
@@ -578,7 +576,7 @@ NewConversionNtuplizer::beginJob()
   ntupleR2S->Branch("deltax",		&(r2sbranch.convvtx.deltax),		"deltax/F");
   ntupleR2S->Branch("deltay",		&(r2sbranch.convvtx.deltay),		"deltay/F");
   ntupleR2S->Branch("deltaz",		&(r2sbranch.convvtx.deltaz),		"deltaz/F");
-  ntupleR2S->Branch("distMinApproach",	&(r2sbranch.convvtx.distMinApproach),	"distMinApproach/F");
+  ntupleR2S->Branch("minapp",	        &(r2sbranch.convvtx.minapp),	        "minapp/F");
   ntupleR2S->Branch("refit",		&(r2sbranch.convvtx.refit),		"refit/I");
   ntupleR2S->Branch("vx",		&(primaryvtx.x),		"vx/F");
   ntupleR2S->Branch("vy",		&(primaryvtx.y),		"vy/F");
@@ -1005,7 +1003,7 @@ fillR2SCrossingPoint(const Conversion& conv){
   const TransientTrack ttk_l(TrackRef(conv.tracks().front()), magField);
   const TransientTrack ttk_r(TrackRef(conv.tracks().back() ), magField);
   
-  r2sbranch.convvtx.distMinApproach =conv.distOfMinimumApproach();
+  r2sbranch.convvtx.minapp =conv.distOfMinimumApproach();
       
   TwoTrackMinimumDistance md;
   md.calculate  (  ttk_l.initialFreeState(),  ttk_r.initialFreeState() );
