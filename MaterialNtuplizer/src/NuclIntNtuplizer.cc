@@ -72,7 +72,12 @@ typedef struct {
   bool isK0, isLambda, isLambdaBar, isKplusLoose, isKminusLoose;
   bool isLooper, isConvLoose, isFake;
   float x, y, z;
-  float deltapt, deltaphi, deltatheta, deltax, deltay, deltaz;
+  float deltapt, deltaphi, deltatheta, deltax, deltay, deltaz, 
+    deltapt_InSim_OutRec, deltaphi_InSim_OutRec, deltatheta_InSim_OutRec;
+  std::vector<float> tkPt,tkEta,tkDxy,tkDz,tkRho;
+  std::vector<int> tkHits,tkAlgo,tkOuter;
+  std::vector<bool> tkPrimary, tkSecondary;
+
 } RECOTOSIM;
 
 class NuclIntNtuplizer : public edm::EDAnalyzer {
@@ -167,6 +172,9 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   r2sbranch.deltapt =0;
   r2sbranch.deltaphi =0;
   r2sbranch.deltatheta =0;
+  r2sbranch.deltapt_InSim_OutRec = 0;
+  r2sbranch.deltaphi_InSim_OutRec = 0;
+  r2sbranch.deltatheta_InSim_OutRec = 0;
   r2sbranch.deltax =0;
   r2sbranch.deltay =0;
   r2sbranch.deltaz =0;
@@ -265,6 +273,16 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       s2rbranch.isLooper =0;
       s2rbranch.isFake =0;
 
+      r2sbranch.tkPt = std::vector<float>();
+      r2sbranch.tkEta = std::vector<float>();
+      r2sbranch.tkDxy = std::vector<float>();
+      r2sbranch.tkDz = std::vector<float>();
+      r2sbranch.tkRho = std::vector<float>();
+      r2sbranch.tkHits = std::vector<int>();
+      r2sbranch.tkAlgo = std::vector<int>();
+      r2sbranch.tkOuter = std::vector<int>();
+      r2sbranch.tkPrimary = std::vector<bool>();
+      r2sbranch.tkSecondary = std::vector<bool>();
 
       //look for matching reco conversion
       if (prints) cout << "look for match" << endl;
@@ -315,8 +333,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	s2rbranch.isK0 = rni->isK0();
 	s2rbranch.isLambda = rni->isLambda();
 	s2rbranch.isLambdaBar = rni->isLambdaBar();
-	s2rbranch.isKplusLoose = rni->isLambda();
-	s2rbranch.isKminusLoose = rni->isLambdaBar();
+	s2rbranch.isKplusLoose = rni->isKplus_Loose();
+	s2rbranch.isKminusLoose = rni->isKminus_Loose();
 	s2rbranch.isConvLoose = rni->isConv_Loose();
 	s2rbranch.isLooper = rni->isLooper();
 	s2rbranch.isFake = rni->isFake();
@@ -372,16 +390,42 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.isK0 = rni->isK0();
     r2sbranch.isLambda = rni->isLambda();
     r2sbranch.isLambdaBar = rni->isLambdaBar();
-    r2sbranch.isKplusLoose = rni->isLambda();
-    r2sbranch.isKminusLoose = rni->isLambdaBar();
+    r2sbranch.isKplusLoose = rni->isKplus_Loose();
+    r2sbranch.isKminusLoose = rni->isKminus_Loose();
     r2sbranch.isConvLoose = rni->isConv_Loose();
     r2sbranch.isLooper = rni->isLooper();
     r2sbranch.isFake = rni->isFake();
+
+    r2sbranch.tkPt = std::vector<float>();
+    r2sbranch.tkEta = std::vector<float>();
+    r2sbranch.tkDxy = std::vector<float>();
+    r2sbranch.tkDz = std::vector<float>();
+    r2sbranch.tkRho = std::vector<float>();
+    r2sbranch.tkHits = std::vector<int>();
+    r2sbranch.tkAlgo = std::vector<int>();
+    r2sbranch.tkOuter = std::vector<int>();
+    r2sbranch.tkPrimary = std::vector<bool>();
+    r2sbranch.tkSecondary = std::vector<bool>();
+    for (Vertex::trackRef_iterator tk=rni->tracks_begin();tk!=rni->tracks_end();++tk) {
+      r2sbranch.tkPt.push_back((*tk)->pt());
+      r2sbranch.tkEta.push_back((*tk)->eta());
+      r2sbranch.tkDxy.push_back((*tk)->dxy(the_pvtx.position()));
+      r2sbranch.tkDz.push_back((*tk)->dz(the_pvtx.position()));
+      r2sbranch.tkRho.push_back((*tk)->innerPosition().Rho());
+      r2sbranch.tkHits.push_back((*tk)->numberOfValidHits());
+      r2sbranch.tkAlgo.push_back((*tk)->algo());
+      r2sbranch.tkOuter.push_back((*tk)->trackerExpectedHitsOuter().numberOfHits());
+      r2sbranch.tkPrimary.push_back(rni->isPrimaryTrack(*tk));
+      r2sbranch.tkSecondary.push_back(rni->isSecondaryTrack(*tk));
+    }
 
     r2sbranch.isAssoc = 0;
     r2sbranch.deltapt = 0;
     r2sbranch.deltaphi = 0;
     r2sbranch.deltatheta = 0;
+    r2sbranch.deltapt_InSim_OutRec = 0;
+    r2sbranch.deltaphi_InSim_OutRec = 0;
+    r2sbranch.deltatheta_InSim_OutRec = 0;
     r2sbranch.deltax = 0;
     r2sbranch.deltay = 0;
     r2sbranch.deltaz = 0;
@@ -393,6 +437,9 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     double deltaTheta = 999;
     double deltaX = 999;
     double deltaY = 999;
+    double deltaPt_InSim_OutRec = 999;
+    double deltaPhi_InSim_OutRec = 999;
+    double deltaTheta_InSim_OutRec = 999;
 
     bool associated = false;
     if (simulation) {
@@ -413,9 +460,14 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	deltaY = iVtx->position().y()-rni->position().y();
 	deltaZ = iVtx->position().z()-rni->position().z();
 	deltaR  = sqrt(iVtx->position().perp2())-sqrt(rni->position().perp2());
+
  	deltaPt = sqrt(momIncSim.Perp2())-sqrt(momIncRec.Perp2());
  	deltaPhi = momIncSim.Phi()-momIncRec.Phi();
  	deltaTheta = momIncSim.Theta()-momIncRec.Theta();
+
+	deltaPt_InSim_OutRec = sqrt(momIncSim.Perp2())-sqrt(momOutRec.Perp2());
+	deltaPhi_InSim_OutRec = momIncSim.Phi()-momOutRec.Phi();
+	deltaTheta_InSim_OutRec = momIncSim.Theta()-momOutRec.Theta();
 
 	if (hitassoc) {
 	} else {
@@ -435,6 +487,10 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	r2sbranch.deltax = deltaX;
 	r2sbranch.deltay = deltaY;
 	r2sbranch.deltaz = deltaZ;
+	r2sbranch.deltapt_InSim_OutRec = deltaPt_InSim_OutRec;
+	r2sbranch.deltaphi_InSim_OutRec = deltaPhi_InSim_OutRec;
+	r2sbranch.deltatheta_InSim_OutRec = deltaTheta_InSim_OutRec;
+
       }
     }
     ntupleR2S->Fill();    
@@ -487,7 +543,7 @@ void NuclIntNtuplizer::beginJob() {
   ntupleS2R->Branch("isLooper",&(s2rbranch.isLooper),"isLooper/B");
   ntupleS2R->Branch("isConvLoose",&(s2rbranch.isConvLoose),"isConvLoose/B");
 
-  ntupleR2S = new TTree("ntupleR2S","sim2reco");
+  ntupleR2S = new TTree("ntupleR2S","reco2sim");
   ntupleR2S->Branch("run",&(r2sbranch.run),"run/I");
   ntupleR2S->Branch("event",&(r2sbranch.event),"event/I");
   ntupleR2S->Branch("isAssoc",&(r2sbranch.isAssoc),"isAssoc/I");
@@ -506,6 +562,9 @@ void NuclIntNtuplizer::beginJob() {
   ntupleR2S->Branch("deltapt",&(r2sbranch.deltapt),"deltapt/F");
   ntupleR2S->Branch("deltaphi",&(r2sbranch.deltaphi),"deltaphi/F");
   ntupleR2S->Branch("deltatheta",&(r2sbranch.deltatheta),"deltatheta/F");
+  ntupleR2S->Branch("deltapt_InSim_OutRec",&(r2sbranch.deltapt_InSim_OutRec),"deltapt_InSim_OutRec/F");
+  ntupleR2S->Branch("deltaphi_InSim_OutRec",&(r2sbranch.deltaphi_InSim_OutRec),"deltaphi_InSim_OutRec/F");
+  ntupleR2S->Branch("deltatheta_InSim_OutRec",&(r2sbranch.deltatheta_InSim_OutRec),"deltatheta_InSim_OutRec/F");
   ntupleR2S->Branch("deltax",&(r2sbranch.deltax),"deltax/F");
   ntupleR2S->Branch("deltay",&(r2sbranch.deltay),"deltay/F");
   ntupleR2S->Branch("deltaz",&(r2sbranch.deltaz),"deltaz/F");
@@ -523,6 +582,17 @@ void NuclIntNtuplizer::beginJob() {
   ntupleR2S->Branch("isLooper",&(r2sbranch.isLooper),"isLooper/B");
   ntupleR2S->Branch("isConvLoose",&(r2sbranch.isConvLoose),"isConvLoose/B");
 
+  ntupleR2S->Branch("tkPt",&(r2sbranch.tkPt),"tkPt");
+  ntupleR2S->Branch("tkEta",&(r2sbranch.tkEta),"tkEta");
+  ntupleR2S->Branch("tkDxy",&(r2sbranch.tkDxy),"tkDxy");
+  ntupleR2S->Branch("tkDz",&(r2sbranch.tkDz),"tkDz");
+  ntupleR2S->Branch("tkRho",&(r2sbranch.tkRho),"tkRho");
+  ntupleR2S->Branch("tkHits",&(r2sbranch.tkHits),"tkHits");
+  ntupleR2S->Branch("tkAlgo",&(r2sbranch.tkAlgo),"tkAlgo");
+  ntupleR2S->Branch("tkOuter",&(r2sbranch.tkOuter),"tkOuter");
+  ntupleR2S->Branch("tkPrimary",&(r2sbranch.tkPrimary),"tkPrimary");
+  ntupleR2S->Branch("tkSecondary",&(r2sbranch.tkSecondary),"tkSecondary");
+  
   TH1::AddDirectory(oldAddDir);
 }
 
@@ -536,7 +606,7 @@ NuclIntNtuplizer::endJob() {
 bool NuclIntNtuplizer::isNuclInt(const TrackingVertex& v ) const {
   using namespace std;
   
-  if (v.position().rho() > 45 || v.position().z()> 150 ||  v.position().rho() < 2) return false;
+  if (v.position().rho() > 45 || fabs(v.position().z())> 150 ||  v.position().rho() < 2) return false;
   
   //FIXME
   //TLorentzVector momentum_in = momentum(v, PFDisplacedVertex::T_TO_VERTEX);
