@@ -124,7 +124,7 @@ typedef struct {
   float pt2, phi2, theta2, x2, y2, z2, chi22;
   float pt, phi, theta, x, y, z, chi2;
   float deltapt, deltaphi, deltatheta, deltax, deltay, deltaz;
-  float distMinApproach, d01, d02, dz1, dz2, iphi1, iphi2;
+  float minapp, d01, d02, dz1, dz2, iphi1, iphi2;
 #ifdef ADDONS
   int refit;
   int missHits1, missHits2;//missed hits
@@ -375,7 +375,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   r2sbranch.deltax =0;
   r2sbranch.deltay =0;
   r2sbranch.deltaz =0;
-  r2sbranch.distMinApproach =0;
+  r2sbranch.minapp =0;
 
 #ifdef ADDONS
   r2sbranch.lambdaError2 =0;
@@ -727,6 +727,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	    //cout << "associated tp1 to track with p=" << tr1->momentum() << " pT=" << tr1->pt() << " frac=" << frac1 << endl;
 	    //cout << "associated tp2 to track with p=" << tr2->momentum() << " pT=" << tr2->pt() << " frac=" << frac2 << endl;
 	  } catch (Exception event) {
+	    //cout << "continue: " << event.what()  << endl;
 	    continue;
 	  }
 	  assoc = true;
@@ -904,7 +905,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     r2sbranch.y =vtx.position().y();
     r2sbranch.z =vtx.position().z();
     r2sbranch.chi2=chiSquaredVtx;
-    r2sbranch.distMinApproach =conv.distOfMinimumApproach();
+    r2sbranch.minapp =conv.distOfMinimumApproach();
 
     if (valid_pvtx){
       r2sbranch.d01 = - tk1->dxy(the_pvtx.position());
@@ -1122,36 +1123,38 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	    }
 	  }
 	}
-	if (tpc.size()==0) continue;
-	RecoToSimCollection p = theAssociator->associateRecoToSim(tc,tpc,&iEvent);
-	try{ 
-	  std::vector<std::pair<TrackingParticleRef, double> > tp1 = p[tfrb1];
-	  std::vector<std::pair<TrackingParticleRef, double> > tp2 = p[tfrb2];
-	  if (tp1.size()&&tp2.size()) {
-	    TrackingParticleRef tpr1 = tp1.front().first;
-	    TrackingParticleRef tpr2 = tp2.front().first;
-	    if (abs(tpr1->pdgId())==11&&abs(tpr2->pdgId())==11) {
-	      if ( (tpr1->parentVertex()->sourceTracks_end()-tpr1->parentVertex()->sourceTracks_begin()==1) && 
-		   (tpr2->parentVertex()->sourceTracks_end()-tpr2->parentVertex()->sourceTracks_begin()==1)) {
-		if (tpr1->parentVertex().key()==tpr2->parentVertex().key() && ((*tpr1->parentVertex()->sourceTracks_begin())->pdgId()==22)) {
-		  simPhoR = sqrt(tpr1->parentVertex()->position().Perp2());
-		  simPhoZ = tpr1->parentVertex()->position().z();
-		  simPhoEta = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().eta();
-		  simPhoPt = sqrt((*tpr1->parentVertex()->sourceTracks_begin())->momentum().Perp2());
-		  simPhoPhi = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().Phi();
-		  simPhoTheta = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().Theta();
-		  if (prints) cout << "reco converted photon with p=" << photonMom << " (pt=" << sqrt(photonMom.Perp2())
-				   << ") associated to reco conversion with p=" << (*tpr1->parentVertex()->sourceTracks_begin())->momentum()
-				   << " recoR=" << recoPhoR << " simR=" << simPhoR << endl;
-		  //cout << "associated track1 to " << tpr1->pdgId() << " with p=" << tpr1->p4() << " with pT=" << tpr1->pt() << endl;
-		  //cout << "associated track2 to " << tpr2->pdgId() << " with p=" << tpr2->p4() << " with pT=" << tpr2->pt() << endl;
-		  associated = true;
+	if (tpc.size()>0) {
+	  RecoToSimCollection p = theAssociator->associateRecoToSim(tc,tpc,&iEvent);
+	  try{ 
+	    std::vector<std::pair<TrackingParticleRef, double> > tp1 = p[tfrb1];
+	    std::vector<std::pair<TrackingParticleRef, double> > tp2 = p[tfrb2];
+	    if (tp1.size()&&tp2.size()) {
+	      TrackingParticleRef tpr1 = tp1.front().first;
+	      TrackingParticleRef tpr2 = tp2.front().first;
+	      if (abs(tpr1->pdgId())==11&&abs(tpr2->pdgId())==11) {
+		if ( (tpr1->parentVertex()->sourceTracks_end()-tpr1->parentVertex()->sourceTracks_begin()==1) && 
+		     (tpr2->parentVertex()->sourceTracks_end()-tpr2->parentVertex()->sourceTracks_begin()==1)) {
+		  if (tpr1->parentVertex().key()==tpr2->parentVertex().key() && ((*tpr1->parentVertex()->sourceTracks_begin())->pdgId()==22)) {
+		    simPhoR = sqrt(tpr1->parentVertex()->position().Perp2());
+		    simPhoZ = tpr1->parentVertex()->position().z();
+		    simPhoEta = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().eta();
+		    simPhoPt = sqrt((*tpr1->parentVertex()->sourceTracks_begin())->momentum().Perp2());
+		    simPhoPhi = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().Phi();
+		    simPhoTheta = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().Theta();
+		    if (prints) cout << "reco converted photon with p=" << photonMom << " (pt=" << sqrt(photonMom.Perp2())
+				     << ") associated to reco conversion with p=" << (*tpr1->parentVertex()->sourceTracks_begin())->momentum()
+				     << " recoR=" << recoPhoR << " simR=" << simPhoR << endl;
+		    //cout << "associated track1 to " << tpr1->pdgId() << " with p=" << tpr1->p4() << " with pT=" << tpr1->pt() << endl;
+		    //cout << "associated track2 to " << tpr2->pdgId() << " with p=" << tpr2->p4() << " with pT=" << tpr2->pt() << endl;
+		    associated = true;
+		  }
 		}
 	      }
 	    }
+	  } catch (Exception event) {
+	    //cout << "do not continue: " << event.what()  << endl;
+	    //continue;
 	  }
-	} catch (Exception event) {
-	  continue;
 	}
       } else {
 	vector<PhotonMCTruth>::const_iterator iPho;
@@ -1319,7 +1322,7 @@ ConversionNtuplizer::beginJob()
   ntupleR2S->Branch("deltax",&(r2sbranch.deltax),"deltax/F");
   ntupleR2S->Branch("deltay",&(r2sbranch.deltay),"deltay/F");
   ntupleR2S->Branch("deltaz",&(r2sbranch.deltaz),"deltaz/F");
-  ntupleR2S->Branch("distMinApproach",&(r2sbranch.distMinApproach),"distMinApproach/F");
+  ntupleR2S->Branch("minapp",&(r2sbranch.minapp),"minapp/F");
 #ifdef ADDONS
   ntupleR2S->Branch("beforeHits1",&(r2sbranch.beforeHits1),"beforeHits1/I");
   ntupleR2S->Branch("beforeHits2",&(r2sbranch.beforeHits2),"beforeHits2/I");
