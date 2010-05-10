@@ -38,6 +38,9 @@ process.conv = cms.EDAnalyzer('ConversionNtuplizer',
                               prints = cms.bool(False)
 )
 
+process.load("SimTracker.TrackAssociation.TrackAssociatorByHits_cfi")
+process.convHit = process.conv.clone(outfile = cms.string('ntuple_conversion_minbias7TeV_hit.root'),hitassoc = cms.bool(True))
+
 process.nucl = cms.EDAnalyzer('NuclIntNtuplizer',
                               outfile = cms.string('ntuple_nuclint_minbias7TeV.root'),
                               hitassoc = cms.bool(False),
@@ -68,7 +71,7 @@ process.disp = cms.Sequence(
     )
 
 process.default = cms.Sequence(process.siPixelRecHits*process.siStripMatchedRecHits*process.ckftracks_wodEdX*
-                               process.trackerOnlyConversionSequence*process.disp*process.conv*process.nucl)
+                               process.trackerOnlyConversionSequence*process.disp*process.conv*process.convHit*process.nucl)
 
 #####################################################################################################
 ####
