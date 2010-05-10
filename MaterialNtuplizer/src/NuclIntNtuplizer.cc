@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.1 2010/04/21 16:06:12 mgouzevi Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.3 2010/05/06 16:05:35 cerati Exp $
 //
 //
 
@@ -66,7 +66,7 @@ typedef struct {
   int isAssoc;
   float pt, phi, theta;
   float ptOut, phiOut, thetaOut, mOut, angle;
-  int nOut;
+  int nOut, nOutTkStep67Good, nOutTkStep67Poor;
   bool isTherePrimaryTrack, isThereMergedTrack;
   bool isNucl, isNuclLoose, isNuclKink;
   bool isK0, isLambda, isLambdaBar, isKplusLoose, isKminusLoose;
@@ -164,6 +164,9 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   r2sbranch.phiOut =0;
   r2sbranch.thetaOut =0;
   r2sbranch.mOut =0;
+  r2sbranch.nOutTkStep67Good =0;
+  r2sbranch.nOutTkStep67Poor =0;
+
   r2sbranch.angle =0;
   r2sbranch.nOut =0;
   r2sbranch.x =0;
@@ -339,8 +342,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	s2rbranch.isLooper = rni->isLooper();
 	s2rbranch.isFake = rni->isFake();
 
-	r2sbranch.isTherePrimaryTrack = rni->isTherePrimaryTracks();
-	r2sbranch.isThereMergedTrack = rni->isThereMergedTracks();
+	s2rbranch.isTherePrimaryTrack = rni->isTherePrimaryTracks();
+	s2rbranch.isThereMergedTrack = rni->isThereMergedTracks();
 
 	break;
       }
@@ -378,8 +381,6 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.mOut = momOutRec.mass();
     r2sbranch.angle = angle;
 
-    r2sbranch.nOut = rni->nSecondaryTracks();
-
     r2sbranch.isTherePrimaryTrack = rni->isTherePrimaryTracks();
     r2sbranch.isThereMergedTrack = rni->isThereMergedTracks();
 
@@ -406,6 +407,9 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.tkOuter = std::vector<int>();
     r2sbranch.tkPrimary = std::vector<bool>();
     r2sbranch.tkSecondary = std::vector<bool>();
+    int tkStep67Good = 0;
+    int tkStep67Poor = 0;
+
     for (Vertex::trackRef_iterator tk=rni->tracks_begin();tk!=rni->tracks_end();++tk) {
       r2sbranch.tkPt.push_back((*tk)->pt());
       r2sbranch.tkEta.push_back((*tk)->eta());
@@ -417,7 +421,23 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       r2sbranch.tkOuter.push_back((*tk)->trackerExpectedHitsOuter().numberOfHits());
       r2sbranch.tkPrimary.push_back(rni->isPrimaryTrack(*tk));
       r2sbranch.tkSecondary.push_back(rni->isSecondaryTrack(*tk));
+
+      if ((*tk)->algo() - 5 > 5) {
+
+	bool isGood67Tk = fabs((*tk)->eta()) < 1.5 
+	  && (*tk)->pt() < 5 
+	  && (*tk)->trackerExpectedHitsOuter().numberOfHits() < 8;
+
+	if ( isGood67Tk ) tkStep67Good++;
+	else tkStep67Poor++;
+	
+      }
+
     }
+
+    r2sbranch.nOut = rni->nSecondaryTracks();
+    r2sbranch.nOutTkStep67Good =  tkStep67Good;
+    r2sbranch.nOutTkStep67Poor =  tkStep67Poor;
 
     r2sbranch.isAssoc = 0;
     r2sbranch.deltapt = 0;
@@ -555,7 +575,13 @@ void NuclIntNtuplizer::beginJob() {
   ntupleR2S->Branch("thetaOut",&(r2sbranch.thetaOut),"thetaOut/F");
   ntupleR2S->Branch("mOut",&(r2sbranch.mOut),"mOut/F");
   ntupleR2S->Branch("angle",&(r2sbranch.angle),"angle/F");
+
   ntupleR2S->Branch("nOut",&(r2sbranch.nOut),"nOut/I");
+  ntupleR2S->Branch("nOutTkStep67Good", &(r2sbranch.nOutTkStep67Good),"nOutTkStep67Good/I");
+  ntupleR2S->Branch("nOutTkStep67Poor", &(r2sbranch.nOutTkStep67Poor),"nOutTkStep67Poor/I");
+
+
+
   ntupleR2S->Branch("x",&(r2sbranch.x),"x/F");
   ntupleR2S->Branch("y",&(r2sbranch.y),"y/F");
   ntupleR2S->Branch("z",&(r2sbranch.z),"z/F");
