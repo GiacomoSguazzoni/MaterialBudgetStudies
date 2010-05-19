@@ -59,8 +59,12 @@ newSeedFromPairs.ClusterCheckPSet.MaxNumberOfCosmicClusters=10000
 secTriplets.ClusterCheckPSet.MaxNumberOfPixelClusters=2000
 fifthSeeds.ClusterCheckPSet.MaxNumberOfCosmicClusters = 10000
 fourthPLSeeds.ClusterCheckPSet.MaxNumberOfCosmicClusters=10000
-    ###### FIXES TRIPLETS FOR LARGE BS DISPLACEMENT ######
-    ### prevent bias in pixel vertex
+thPLSeeds.ClusterCheckPSet.MaxNumberOfCosmicClusters = 10000
+thPLSeeds.ClusterCheckPSet.MaxNumberOfPixelClusters = 2000
+
+###### FIXES TRIPLETS FOR LARGE BS DISPLACEMENT ######
+
+### prevent bias in pixel vertex
 pixelVertices.useBeamConstraint = False
 
 ### pixelTracks
@@ -73,13 +77,15 @@ newSeedFromTriplets.RegionFactoryPSet.ComponentName = 'GlobalRegionProducerFromB
 #---- new parameters ----
 newSeedFromTriplets.RegionFactoryPSet.RegionPSet.nSigmaZ   = cms.double(4.06)  # was originHalfLength = 15.9; translated assuming sigmaZ ~ 3.8
 newSeedFromTriplets.RegionFactoryPSet.RegionPSet.beamSpot = cms.InputTag("offlineBeamSpot")
-    ### 2nd step of iterative tracking
+
+### 2nd step of iterative tracking
 #---- replaces ----
 secTriplets.RegionFactoryPSet.ComponentName = 'GlobalRegionProducerFromBeamSpot' # was GlobalRegionProducer
 #---- new parameters ----
 secTriplets.RegionFactoryPSet.RegionPSet.nSigmaZ  = cms.double(4.47)  # was originHalfLength = 17.5; translated assuming sigmaZ ~ 3.8
 secTriplets.RegionFactoryPSet.RegionPSet.beamSpot = cms.InputTag("offlineBeamSpot")
-    ## Primary Vertex
+
+## Primary Vertex
 offlinePrimaryVerticesWithBS.PVSelParameters.maxDistanceToBeam = 2
 offlinePrimaryVerticesWithBS.TkFilterParameters.maxNormalizedChi2 = 20
 offlinePrimaryVerticesWithBS.TkFilterParameters.minSiliconHits = 6
@@ -92,32 +98,32 @@ offlinePrimaryVertices.TkFilterParameters.minSiliconHits = 6
 offlinePrimaryVertices.TkFilterParameters.maxD0Significance = 100
 offlinePrimaryVertices.TkFilterParameters.minPixelHits = 1
 offlinePrimaryVertices.TkClusParameters.zSeparation = 1
-    ## ECAL 
+
+## ECAL 
 ecalRecHit.ChannelStatusToBeExcluded = [ 1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 78, 142 ]
-    ##Preshower
+
+##Preshower
 ecalPreshowerRecHit.ESBaseline = 0
-    ##Preshower algo for data is different than for MC
+
+##Preshower algo for data is different than for MC
 ecalPreshowerRecHit.ESRecoAlgo = cms.untracked.int32(1)
-    ## HCAL temporary fixes
+
+## HCAL temporary fixes
 hfreco.firstSample  = 3
 hfreco.samplesToAdd = 4
 
 ## EGAMMA
-gsfElectrons.applyPreselection = cms.bool(False)
-photons.minSCEtBarrel = 2.
-photons.minSCEtEndcap =2.
-photonCore.minSCEt = 2.
-conversionTrackCandidates.minSCEt =1.
-conversions.minSCEt =1.
-trackerOnlyConversions.AllowTrackBC = cms.bool(False)
-trackerOnlyConversions.AllowRightBC = cms.bool(False)
-trackerOnlyConversions.MinApproach = cms.double(-.25)
-trackerOnlyConversions.DeltaCotTheta = cms.double(0.1)
-trackerOnlyConversions.rCut = cms.double(2.)
+photons.minSCEtBarrel = 5.
+photons.minSCEtEndcap =5.
+photonCore.minSCEt = 5.
+conversionTrackCandidates.minSCEt =5.
+conversions.minSCEt =5.
+trackerOnlyConversions.AllowTrackBC = False
+trackerOnlyConversions.AllowRightBC = False
+trackerOnlyConversions.rCut = 2.
+trackerOnlyConversions.vtxChi2 = 0.0005
 
 ###
 ###  end of top level replacements
 ###
 ###############################################################################################
-
-
