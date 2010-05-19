@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.3 2010/05/06 16:05:35 cerati Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.4 2010/05/10 08:36:01 cerati Exp $
 //
 //
 
@@ -632,7 +632,7 @@ NuclIntNtuplizer::endJob() {
 bool NuclIntNtuplizer::isNuclInt(const TrackingVertex& v ) const {
   using namespace std;
   
-  if (v.position().rho() > 45 || fabs(v.position().z())> 150 ||  v.position().rho() < 2) return false;
+  if (v.position().rho() > 120 || fabs(v.position().z())> 150 ||  v.position().rho() < 2) return false;
   
   //FIXME
   //TLorentzVector momentum_in = momentum(v, PFDisplacedVertex::T_TO_VERTEX);
