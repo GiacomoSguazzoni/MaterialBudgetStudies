@@ -14,8 +14,8 @@ process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(5000))
 
 from Tests.MaterialNtuplizer.LumiList import *
 runLister = LumiList(filename = 'Cert_132440-134725_7TeV_MinimumBias_May6ReReco_Collisions10_JSON.txt')
-process.source.lumisToProcess = cms.string(str(runLister.getCMSSWString()))
-print process.source.lumisToProcess
+process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange(str(runLister.getCMSSWString()).split(","))
+print runLister.getCMSSWString()
 
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1000)
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(5000))
