@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id$
+// $Id: ConversionNtuplizer.cc,v 1.3 2010/05/06 13:02:56 cerati Exp $
 //
 //
 
@@ -1255,8 +1255,6 @@ ConversionNtuplizer::beginJob()
   ntupleS2R->Branch("thetaseed2",&(s2rbranch.thetaseed2),"thetaseed2/F");
   ntupleS2R->Branch("rseed2",&(s2rbranch.rseed2),"rseed2/F");
   ntupleS2R->Branch("zseed2",&(s2rbranch.zseed2),"zseed2/F");
-  ntupleS2R->Branch("r_algo1",&(s2rbranch.r_algo1),"r_algo1/I");
-  ntupleS2R->Branch("r_algo2",&(s2rbranch.r_algo2),"r_algo2/I");
   ntupleS2R->Branch("r_pt1",&(s2rbranch.r_pt1),"r_pt1/F");
   ntupleS2R->Branch("r_d01",&(s2rbranch.r_d01),"r_d01/F");
   ntupleS2R->Branch("r_theta1",&(s2rbranch.r_theta1),"r_theta1/F");
