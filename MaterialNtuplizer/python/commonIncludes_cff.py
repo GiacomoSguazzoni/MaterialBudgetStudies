@@ -20,7 +20,7 @@ TrackAssociatorByHits.Cut_RecoToSim = 0.5
 
 from Tests.MaterialNtuplizer.ConversionNtuplizer_cfi import conv
 from Tests.MaterialNtuplizer.NuclIntNtuplizer_cfi import nucl
-convHit = conv.clone(hitassoc = cms.bool(True))
+#convHit = conv.clone(hitassoc = cms.bool(True))
 
 from L1TriggerConfig.L1GtConfigProducers.L1GtTriggerMaskTechTrigConfig_cff import *
 from HLTrigger.HLTfilters.hltLevel1GTSeed_cfi import hltLevel1GTSeed
@@ -45,7 +45,8 @@ disp = cms.Sequence(
 )
 
 default = cms.Sequence(siPixelRecHits*siStripMatchedRecHits*ckftracks_wodEdX*
-                       trackerOnlyConversionSequence*disp*conv*convHit*nucl)
+                       trackerOnlyConversionSequence*disp*conv#*convHit
+                       *nucl)
 
 #####################################################################################################
 ####

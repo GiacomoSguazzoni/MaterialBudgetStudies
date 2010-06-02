@@ -23,8 +23,6 @@ process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
 
 process.conv.outfile = cms.string('ntuple_conversion_goodcoll7TeV.root')
 process.conv.simulation = cms.bool(False)
-process.convHit.outfile = cms.string('ntuple_conversion_goodcoll7TeV_hit.root')
-process.convHit.simulation = cms.bool(False)
 process.nucl.outfile = cms.string('ntuple_nuclint_goodcoll7TeV.root')
 process.nucl.simulation = cms.bool(False)
 
