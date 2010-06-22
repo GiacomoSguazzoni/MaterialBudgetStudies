@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: ConversionNtuplizer.cc,v 1.4 2010/05/21 10:48:37 cerati Exp $
+// $Id: ConversionNtuplizer.cc,v 1.5 2010/06/22 17:55:40 hlliu Exp $
 //
 //
 
@@ -1054,7 +1054,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       r2sbranch.r_theta2 =rtk2.theta();
       r2sbranch.r_px2 = rtk2.px();
       r2sbranch.r_py2 = rtk2.py();
-      r2sbranch.r_py2 = rtk2.pz();
+      r2sbranch.r_pz2 = rtk2.pz();
       r2sbranch.r_pt =refit_recoPhoPt;
       r2sbranch.r_phi =refit_photonMom.phi();
       r2sbranch.r_theta =refit_photonMom.theta();
