@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: ConversionNtuplizer.cc,v 1.3 2010/05/06 13:02:56 cerati Exp $
+// $Id: ConversionNtuplizer.cc,v 1.4 2010/05/21 10:48:37 cerati Exp $
 //
 //
 
@@ -1044,17 +1044,17 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	r2sbranch.r_d02 =rtk2.d0();
       }
       r2sbranch.r_pt1 =rtk1.pt();
-      r2sbranch.r_phi1 =rtk1.innerMomentum().phi();
+      r2sbranch.r_phi1 =rtk1.phi();
       r2sbranch.r_theta1 =rtk1.theta();
-      r2sbranch.r_px1 = rtk1.innerMomentum().x();
-      r2sbranch.r_py1 = rtk1.innerMomentum().y();
-      r2sbranch.r_py1 = rtk1.innerMomentum().z();
+      r2sbranch.r_px1 = rtk1.px();
+      r2sbranch.r_py1 = rtk1.py();
+      r2sbranch.r_pz1 = rtk1.pz();
       r2sbranch.r_pt2 =rtk2.pt();
-      r2sbranch.r_phi2 =rtk2.innerMomentum().phi();
+      r2sbranch.r_phi2 =rtk2.phi();
       r2sbranch.r_theta2 =rtk2.theta();
-      r2sbranch.r_px2 = rtk2.innerMomentum().x();
-      r2sbranch.r_py2 = rtk2.innerMomentum().y();
-      r2sbranch.r_py2 = rtk2.innerMomentum().z();
+      r2sbranch.r_px2 = rtk2.px();
+      r2sbranch.r_py2 = rtk2.py();
+      r2sbranch.r_py2 = rtk2.pz();
       r2sbranch.r_pt =refit_recoPhoPt;
       r2sbranch.r_phi =refit_photonMom.phi();
       r2sbranch.r_theta =refit_photonMom.theta();
