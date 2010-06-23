@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: ConversionNtuplizer.cc,v 1.5 2010/06/22 17:55:40 hlliu Exp $
+// $Id: ConversionNtuplizer.cc,v 1.6 2010/06/22 17:57:03 hlliu Exp $
 //
 //
 
@@ -920,6 +920,8 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     }
 
     double iphi1 = tk1->innerMomentum().phi(), iphi2 = tk2->innerMomentum().phi();
+    GlobalVector ip1(tk1->innerMomentum().x(), tk1->innerMomentum().y(), tk1->innerMomentum().z()),
+      ip2(tk2->innerMomentum().x(), tk2->innerMomentum().y(), tk2->innerMomentum().z());
     //take the phi from the vertex if it can propagate back to that position
     Surface::RotationType rot;
     ReferenceCountingPointer<BoundCylinder>  theBarrel_(new BoundCylinder( Surface::PositionType(0,0,0), rot,
@@ -929,7 +931,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     ReferenceCountingPointer<BoundDisk>      theDisk_(
 						      new BoundDisk( Surface::PositionType( 0, 0, vtx.position().z()), rot,
 								     SimpleDiskBounds( 0, recoPhoR, -0.001, 0.001)));
-        const TrajectoryStateOnSurface myTSOS1 = transformer.innerStateOnSurface(*tk1, *trackerGeom, magField);
+    const TrajectoryStateOnSurface myTSOS1 = transformer.innerStateOnSurface(*tk1, *trackerGeom, magField);
     const TrajectoryStateOnSurface myTSOS2 = transformer.innerStateOnSurface(*tk2, *trackerGeom, magField);
     TrajectoryStateOnSurface  stateAtVtx1, stateAtVtx2;
     stateAtVtx1 = propag.propagate(myTSOS1, *theBarrel_);
@@ -938,6 +940,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     }
     if (stateAtVtx1.isValid()){
       iphi1 = stateAtVtx1.globalDirection().phi();
+      ip1 = stateAtVtx1.globalMomentum();
     }
     stateAtVtx2 = propag.propagate(myTSOS2, *theBarrel_);
     if (!stateAtVtx2.isValid() ) {
@@ -945,6 +948,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     }
     if (stateAtVtx2.isValid()){
       iphi2 = stateAtVtx2.globalDirection().phi();
+      ip2 = stateAtVtx1.globalMomentum();
     }
     bool back_prop1 = (tk1->innerPosition().Rho()<recoPhoR) && fabs(tk1->innerPosition().z())<fabs(vtx.position().z());
     bool back_prop2 = (tk2->innerPosition().Rho()<recoPhoR) && fabs(tk2->innerPosition().z())<fabs(vtx.position().z());
@@ -1025,9 +1029,6 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       }
     }
 
-    GlobalVector ip1(tk1->innerMomentum().x(), tk1->innerMomentum().y(), tk1->innerMomentum().z()),
-      ip2(tk2->innerMomentum().x(), tk2->innerMomentum().y(), tk2->innerMomentum().z());
- 
     if (has_refit){
       Track& rtk1 = refit_tracks.front();
       Track& rtk2 = refit_tracks.back();
