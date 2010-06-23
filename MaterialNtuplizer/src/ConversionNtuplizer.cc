@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: ConversionNtuplizer.cc,v 1.6 2010/06/22 17:57:03 hlliu Exp $
+// $Id: ConversionNtuplizer.cc,v 1.7 2010/06/23 11:47:47 nancy Exp $
 //
 //
 
@@ -948,7 +948,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     }
     if (stateAtVtx2.isValid()){
       iphi2 = stateAtVtx2.globalDirection().phi();
-      ip2 = stateAtVtx1.globalMomentum();
+      ip2 = stateAtVtx2.globalMomentum();
     }
     bool back_prop1 = (tk1->innerPosition().Rho()<recoPhoR) && fabs(tk1->innerPosition().z())<fabs(vtx.position().z());
     bool back_prop2 = (tk2->innerPosition().Rho()<recoPhoR) && fabs(tk2->innerPosition().z())<fabs(vtx.position().z());
