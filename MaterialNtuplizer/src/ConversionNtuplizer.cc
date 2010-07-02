@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: ConversionNtuplizer.cc,v 1.7 2010/06/23 11:47:47 nancy Exp $
+// $Id: ConversionNtuplizer.cc,v 1.8 2010/06/23 18:17:08 nancy Exp $
 //
 //
 
@@ -1142,6 +1142,9 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 		    simPhoPt = sqrt((*tpr1->parentVertex()->sourceTracks_begin())->momentum().Perp2());
 		    simPhoPhi = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().Phi();
 		    simPhoTheta = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().Theta();
+		    deltaX = tpr1->parentVertex()->position().x()-vtx.position().x();
+		    deltaY = tpr1->parentVertex()->position().y()-vtx.position().y();
+		    deltaZ = tpr1->parentVertex()->position().z()-vtx.position().z();
 		    if (prints) cout << "reco converted photon with p=" << photonMom << " (pt=" << sqrt(photonMom.Perp2())
 				     << ") associated to reco conversion with p=" << (*tpr1->parentVertex()->sourceTracks_begin())->momentum()
 				     << " recoR=" << recoPhoR << " simR=" << simPhoR << endl;
