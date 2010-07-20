@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.5 2010/05/19 15:12:58 cerati Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.6 2010/06/02 11:56:28 cerati Exp $
 //
 //
 
@@ -42,6 +42,9 @@ Implementation:
 #include "SimTracker/TrackAssociation/interface/TrackAssociatorBase.h"
 #include "DataFormats/Common/interface/RefToBaseVector.h"
 
+#include "DataFormats/EgammaCandidates/interface/Conversion.h"
+#include "DataFormats/EgammaCandidates/interface/ConversionFwd.h"
+
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TFile.h>
@@ -50,7 +53,7 @@ Implementation:
 typedef struct { 
   int run, event;
   int isAssoc;
-  bool isNuclSim, isKSim;
+  bool isNuclSim, isKSim, isConvSim;
   float pt, phi, theta;
   float ptOut, phiOut, thetaOut, mOut;
   int nOut;
@@ -58,14 +61,14 @@ typedef struct {
   bool isNucl, isNuclLoose, isNuclKink;
   bool isK0, isLambda, isLambdaBar, isKplusLoose, isKminusLoose;
   bool isLooper, isConvLoose, isFake;
-  float x, y, z;
+  float x, y, z, vtx_eta, vtx_phi;
   float deltapt, deltaphi, deltatheta, deltax, deltay, deltaz;
 } SIMTORECO;
 
 typedef struct { 
   int run, event;
   int isAssoc;
-  bool isNuclSim, isKSim;
+  bool isNuclSim, isKSim, isConvSim, isAssosToTrkOnlyConv;
   float pt, phi, theta;
   float ptOut, phiOut, thetaOut, mOut, angle;
   float mK;
@@ -74,7 +77,7 @@ typedef struct {
   bool isNucl, isNuclLoose, isNuclKink;
   bool isK0, isLambda, isLambdaBar, isKplusLoose, isKminusLoose;
   bool isLooper, isConvLoose, isFake;
-  float x, y, z;
+  float x, y, z, vtx_eta, vtx_phi;
   float deltapt, deltaphi, deltatheta, deltax, deltay, deltaz, 
     deltapt_InSim_OutRec, deltaphi_InSim_OutRec, deltatheta_InSim_OutRec;
   std::vector<float> tkPt,tkEta,tkDxy,tkDz,tkRho;
@@ -99,6 +102,7 @@ private:
   virtual void endJob() ;
   bool isNuclInt(const TrackingVertex&) const;  
   bool isKDecay(const TrackingVertex&) const;  
+  bool isConversion(const TrackingVertex&) const;  
   float getKMass(const reco::PFDisplacedVertex&) const;
 
   TFile * file;
@@ -143,6 +147,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   s2rbranch.isAssoc =0;
   s2rbranch.isNuclSim =0;
   s2rbranch.isKSim =0;
+  s2rbranch.isConvSim =0;
 
   s2rbranch.pt =0;
   s2rbranch.phi =0;
@@ -155,6 +160,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   s2rbranch.x =0;
   s2rbranch.y =0;
   s2rbranch.z =0;
+  s2rbranch.vtx_phi =0;
+  s2rbranch.vtx_eta =0;
   s2rbranch.deltapt =0;
   s2rbranch.deltaphi =0;
   s2rbranch.deltatheta =0;
@@ -185,6 +192,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
   r2sbranch.isNuclSim =0;
   r2sbranch.isKSim =0;
+  r2sbranch.isConvSim =0;
 
   r2sbranch.pt =0;
   r2sbranch.phi =0;
@@ -202,6 +210,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   r2sbranch.x =0;
   r2sbranch.y =0;
   r2sbranch.z =0;
+  r2sbranch.vtx_phi =0;
+  r2sbranch.vtx_eta =0;
   r2sbranch.deltapt =0;
   r2sbranch.deltaphi =0;
   r2sbranch.deltatheta =0;
@@ -245,6 +255,10 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     valid_pvtx = true;
   }
 
+  Handle<ConversionCollection> pInConv;
+  iEvent.getByLabel("trackerOnlyConversions",pInConv);
+
+
   Handle<TrackingVertexCollection> SimVtx;
 
   if (simulation) {
@@ -267,8 +281,9 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       if (iVtx->nSourceTracks()<1) continue; 
       bool isNuclSim = isNuclInt(*iVtx);
       bool isKSim = isKDecay(*iVtx);
+      bool isConvSim = isConversion(*iVtx);
 
-      if (!isNuclSim && !isKSim) continue;
+      if (!isNuclSim && !isKSim && !isConvSim) continue;
 
       if (prints) cout << "fill mc" << endl;
       math::XYZVectorD momIncSim = (*iVtx->sourceTracks_begin())->momentum();
@@ -281,10 +296,13 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
       s2rbranch.isNuclSim = isNuclSim;
       s2rbranch.isKSim = isKSim;
+      s2rbranch.isConvSim = isConvSim;
 
       s2rbranch.x =iVtx->position().x();
       s2rbranch.y =iVtx->position().y();
       s2rbranch.z =iVtx->position().z();
+      s2rbranch.vtx_phi =iVtx->position().phi();
+      s2rbranch.vtx_eta =iVtx->position().eta();
       s2rbranch.pt = sqrt(momIncSim.Perp2());
       s2rbranch.phi = momIncSim.Phi();
       s2rbranch.theta = momIncSim.Theta();
@@ -399,6 +417,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.x =rni->position().x();
     r2sbranch.y =rni->position().y();
     r2sbranch.z =rni->position().z();
+    r2sbranch.vtx_phi =rni->position().phi();
+    r2sbranch.vtx_eta =rni->position().eta();
     r2sbranch.pt = sqrt(momIncRec.Perp2());
     r2sbranch.phi = momIncRec.Phi();
     r2sbranch.theta = momIncRec.Theta();
@@ -470,6 +490,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.isAssoc = 0;
     r2sbranch.isNuclSim =0;
     r2sbranch.isKSim =0;
+    r2sbranch.isConvSim =0;
     r2sbranch.deltapt = 0;
     r2sbranch.deltaphi = 0;
     r2sbranch.deltatheta = 0;
@@ -492,7 +513,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     double deltaTheta_InSim_OutRec = 999;
     bool isNuclSim = 0;
     bool isKSim = 0;
-
+    bool isConvSim = 0;
+    bool isAssosToTrkOnlyConv = 0;
 
     bool associated = false;
     if (simulation) {
@@ -504,8 +526,9 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
         isNuclSim = isNuclInt(*iVtx);
 	isKSim = isKDecay(*iVtx);
+	isConvSim = isConversion(*iVtx);
 
-	if (!isNuclSim && !isKSim ) continue;
+	if (!isNuclSim && !isKSim && !isConvSim) continue;
 
 	math::XYZVectorD momIncSim = (*iVtx->sourceTracks_begin())->momentum();
 	math::XYZTLorentzVectorD momOutSim(0,0,0,0);
@@ -540,6 +563,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	r2sbranch.isAssoc =1;
 	r2sbranch.isNuclSim = isNuclSim;
 	r2sbranch.isKSim = isKSim;
+	r2sbranch.isConvSim = isConvSim;
 	r2sbranch.deltapt =deltaPt;
 	r2sbranch.deltaphi =deltaPhi;
 	r2sbranch.deltatheta =deltaTheta;
@@ -552,6 +576,20 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
       }
     }
+
+    
+    for (ConversionCollection::const_iterator conv = pInConv->begin();conv!=pInConv->end();++conv) {
+      if (conv->nTracks()!=2) continue;
+      TrackRef tk1 = conv->tracks().front();
+      TrackRef tk2 = conv->tracks().back();
+      for (Vertex::trackRef_iterator tk=rni->tracks_begin();tk!=rni->tracks_end();++tk){
+	if (fabs((*tk)->pt()-tk1->pt()) < 1e-6 || fabs((*tk)->pt()-tk2->pt()) < 1e-6) isAssosToTrkOnlyConv = true;
+      }
+    }
+
+    r2sbranch.isAssosToTrkOnlyConv = isAssosToTrkOnlyConv;
+
+
     ntupleR2S->Fill();    
     if (prints) cout << "end of loop" << endl;
   }  
@@ -578,6 +616,7 @@ void NuclIntNtuplizer::beginJob() {
   ntupleS2R->Branch("isAssoc",&(s2rbranch.isAssoc),"isAssoc/I");
   ntupleS2R->Branch("isNuclSim",&(s2rbranch.isNuclSim),"isNuclSim/B");
   ntupleS2R->Branch("isKSim",&(s2rbranch.isKSim),"isKSim/B");
+  ntupleS2R->Branch("isConvSim",&(s2rbranch.isConvSim),"isConvSim/B");
   ntupleS2R->Branch("pt",&(s2rbranch.pt),"pt/F");
   ntupleS2R->Branch("phi",&(s2rbranch.phi),"phi/F");
   ntupleS2R->Branch("theta",&(s2rbranch.theta),"theta/F");
@@ -589,6 +628,8 @@ void NuclIntNtuplizer::beginJob() {
   ntupleS2R->Branch("x",&(s2rbranch.x),"x/F");
   ntupleS2R->Branch("y",&(s2rbranch.y),"y/F");
   ntupleS2R->Branch("z",&(s2rbranch.z),"z/F");
+  ntupleS2R->Branch("vtx_phi",&(s2rbranch.vtx_phi),"vtx_phi/F");
+  ntupleS2R->Branch("vtx_eta",&(s2rbranch.vtx_eta),"vtx_eta/F");
   ntupleS2R->Branch("deltapt",&(s2rbranch.deltapt),"deltapt/F");
   ntupleS2R->Branch("deltaphi",&(s2rbranch.deltaphi),"deltaphi/F");
   ntupleS2R->Branch("deltatheta",&(s2rbranch.deltatheta),"deltatheta/F");
@@ -615,6 +656,8 @@ void NuclIntNtuplizer::beginJob() {
   ntupleR2S->Branch("isAssoc",&(r2sbranch.isAssoc),"isAssoc/I");
   ntupleR2S->Branch("isNuclSim",&(r2sbranch.isNuclSim),"isNuclSim/B");
   ntupleR2S->Branch("isKSim",&(r2sbranch.isKSim),"isKSim/B");
+  ntupleR2S->Branch("isConvSim",&(r2sbranch.isConvSim),"isConvSim/B");
+  ntupleR2S->Branch("isAssosToTrkOnlyConv",&(r2sbranch.isAssosToTrkOnlyConv),"isAssosToTrkOnlyConv/B");
   ntupleR2S->Branch("pt",&(r2sbranch.pt),"pt/F");
   ntupleR2S->Branch("phi",&(r2sbranch.phi),"phi/F");
   ntupleR2S->Branch("theta",&(r2sbranch.theta),"theta/F");
@@ -634,11 +677,13 @@ void NuclIntNtuplizer::beginJob() {
   ntupleR2S->Branch("x",&(r2sbranch.x),"x/F");
   ntupleR2S->Branch("y",&(r2sbranch.y),"y/F");
   ntupleR2S->Branch("z",&(r2sbranch.z),"z/F");
+  ntupleR2S->Branch("vtx_phi",&(r2sbranch.vtx_phi),"vtx_phi/F");
+  ntupleR2S->Branch("vtx_eta",&(r2sbranch.vtx_eta),"vtx_eta/F");
   ntupleR2S->Branch("deltapt",&(r2sbranch.deltapt),"deltapt/F");
   ntupleR2S->Branch("deltaphi",&(r2sbranch.deltaphi),"deltaphi/F");
   ntupleR2S->Branch("deltatheta",&(r2sbranch.deltatheta),"deltatheta/F");
   ntupleR2S->Branch("deltapt_InSim_OutRec",&(r2sbranch.deltapt_InSim_OutRec),"deltapt_InSim_OutRec/F");
-  ntupleR2S->Branch("deltaphi_InSim_OutRec",&(r2sbranch.deltaphi_InSim_OutRec),"deltaphi_InSim_OutRec/F");
+  ntupleR2S->Branch("deltaphi_InSim_OutRec",&(r2sbranch.deltaphi_InSim_OutRec),"deltaphin_InSim_OutRec/F");
   ntupleR2S->Branch("deltatheta_InSim_OutRec",&(r2sbranch.deltatheta_InSim_OutRec),"deltatheta_InSim_OutRec/F");
   ntupleR2S->Branch("deltax",&(r2sbranch.deltax),"deltax/F");
   ntupleR2S->Branch("deltay",&(r2sbranch.deltay),"deltay/F");
@@ -730,6 +775,22 @@ bool NuclIntNtuplizer::isNuclInt(const TrackingVertex& v ) const {
 
   return true;
 }
+
+
+
+
+bool NuclIntNtuplizer::isConversion(const TrackingVertex& v ) const {
+
+  if (v.position().rho() > 120 || fabs(v.position().z())> 150 ||  v.position().rho() < 2) return false;
+
+  for (TrackingVertex::tp_iterator simMother = v.sourceTracks_begin();simMother != v.sourceTracks_end();++simMother){
+    if ( (**simMother).pdgId() == 22 ) return true;
+  }
+
+  return false;
+
+}
+
 
 
 
