@@ -46,7 +46,8 @@ disp = cms.Sequence(
 
 default = cms.Sequence(siPixelRecHits*siStripMatchedRecHits*ckftracks_wodEdX*
                        trackerOnlyConversionSequence*disp*conv#*convHit
-                       *nucl)
+                       *nucl
+		       )
 
 #####################################################################################################
 ####
@@ -89,16 +90,21 @@ secTriplets.RegionFactoryPSet.RegionPSet.beamSpot = cms.InputTag("offlineBeamSpo
 ## Primary Vertex
 offlinePrimaryVerticesWithBS.PVSelParameters.maxDistanceToBeam = 2
 offlinePrimaryVerticesWithBS.TkFilterParameters.maxNormalizedChi2 = 20
-offlinePrimaryVerticesWithBS.TkFilterParameters.minSiliconHits = 6
+#offlinePrimaryVerticesWithBS.TkFilterParameters.minSiliconHits = 6
+#see RecoVertex/PrimaryVertexProducer/python/OfflinePrimaryVertices_cfi.py
+offlinePrimaryVerticesWithBS.TkFilterParameters.minSiliconLayersWithHits = 5
 offlinePrimaryVerticesWithBS.TkFilterParameters.maxD0Significance = 100
-offlinePrimaryVerticesWithBS.TkFilterParameters.minPixelHits = 1
-offlinePrimaryVerticesWithBS.TkClusParameters.zSeparation = 1
+#offlinePrimaryVerticesWithBS.TkFilterParameters.minPixelHits = 1
+offlinePrimaryVerticesWithBS.TkFilterParameters.minPixelLayersWithHits = 1
+offlinePrimaryVerticesWithBS.TkClusParameters.TkGapClusParameters.zSeparation = 1
 offlinePrimaryVertices.PVSelParameters.maxDistanceToBeam = 2
 offlinePrimaryVertices.TkFilterParameters.maxNormalizedChi2 = 20
-offlinePrimaryVertices.TkFilterParameters.minSiliconHits = 6
+#offlinePrimaryVertices.TkFilterParameters.minSiliconHits = 6
+offlinePrimaryVertices.TkFilterParameters.minSiliconLayersWithHits = 6
 offlinePrimaryVertices.TkFilterParameters.maxD0Significance = 100
-offlinePrimaryVertices.TkFilterParameters.minPixelHits = 1
-offlinePrimaryVertices.TkClusParameters.zSeparation = 1
+#offlinePrimaryVertices.TkFilterParameters.minPixelHits = 1
+offlinePrimaryVertices.TkFilterParameters.minPixelLayersWithHits = 1
+offlinePrimaryVertices.TkClusParameters.TkGapClusParameters.zSeparation = 1
 
 ## ECAL 
 ecalRecHit.ChannelStatusToBeExcluded = [ 1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 78, 142 ]
