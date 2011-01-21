@@ -687,6 +687,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	deltaPhi = photonMom.phi()-mcPhoPhi;
 	deltaTheta = photonMom.theta()-mcPhoTheta;
 #ifdef ADDONS
+	/*
 	PTrajectoryStateOnDet state1 = tk1->seedRef()->startingState();
 	DetId detId1(state1.detId());
 	TrajectoryStateOnSurface tsos1 = transformer.transientState( state1, &(theG->idToDet(detId1)->surface()), theMF.product());
@@ -705,6 +706,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	thetaSeed2 = tsos2.globalMomentum().theta();
 	rSeed2 = tsos2.globalPosition().perp();
 	zSeed2 = tsos2.globalPosition().z();
+	*/
  	theAlgo1 = tk1->algo();
 	theAlgo2 = tk2->algo();
 #endif
@@ -733,7 +735,13 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	  }
 	  assoc = true;
 	} else {
-	  if (fabs(deltaX)>5. || fabs(deltaY)>5. || fabs(deltaZ)>5.) continue;
+          bool associationCondition = false;
+	  if (fabs(vtx.position().eta())<1.2) 
+	    associationCondition =(fabs(deltaX)<5. && fabs(deltaY)<5. &&fabs(deltaZ)<5.);
+	  else 
+	    associationCondition =(fabs(deltaX)<10. && fabs(deltaY)<10. &&fabs(deltaZ)<10.);
+
+          if ( ! associationCondition ) continue;
 	  assoc = true;
 	}
 	if (prints) cout << "associated" << endl;
@@ -1176,7 +1184,14 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	    deltaX = (*iPho).vertex().x()-vtx.position().x();
 	    deltaY = (*iPho).vertex().y()-vtx.position().y();
 	    deltaZ = (*iPho).vertex().z()-vtx.position().z();
-	    if (fabs(deltaX)<5. && fabs(deltaY)<5. && fabs(deltaZ)<5.) {
+
+	    bool associationCondition = false;
+	    if (fabs(vtx.position().eta())<1.2) 
+	      associationCondition =(fabs(deltaX)<5. && fabs(deltaY)<5. &&fabs(deltaZ)<5.);
+	    else 
+	      associationCondition =(fabs(deltaX)<10. && fabs(deltaY)<10. &&fabs(deltaZ)<10.);
+	    
+	    if ( associationCondition ) {
 	      //if (prints) cout << "recV=" << vtx.position() << " simV=" << (*iPho).vertex() << " deltaR=" << vtx.position().perp()-(*iPho).vertex().perp() << " deltaPt=" << sqrt(photonMom.perp2())-(*iPho).fourMomentum().perp() << endl;
 	      associated = true;
 	      deltaR  = recoPhoR-simPhoR;

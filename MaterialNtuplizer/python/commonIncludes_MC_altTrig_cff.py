@@ -22,9 +22,31 @@ from Tests.MaterialNtuplizer.ConversionNtuplizer_cfi import conv
 from Tests.MaterialNtuplizer.NuclIntNtuplizer_cfi import nucl
 #convHit = conv.clone(hitassoc = cms.bool(True))
 
+#====================================================================================
+#
+# New wrt PAS: correct selection of the HLT for Minimum Bias 
+
+#most similar to altTrig for MC is bit34
+
 from L1TriggerConfig.L1GtConfigProducers.L1GtTriggerMaskTechTrigConfig_cff import *
 from HLTrigger.HLTfilters.hltLevel1GTSeed_cfi import hltLevel1GTSeed
-bit40 = hltLevel1GTSeed.clone(L1TechTriggerSeeding = cms.bool(True), L1SeedsLogicalExpression = cms.string('40 AND NOT (36 OR 37 OR 38 OR 39)'))
+bit34 = hltLevel1GTSeed.clone(L1TechTriggerSeeding = cms.bool(True), L1SeedsLogicalExpression = cms.string('34'))
+
+#Below not applicable for MC
+
+###unmasking
+#from L1TriggerConfig.L1GtConfigProducers.L1GtTriggerMaskTechTrigConfig_cff import *
+#from HLTrigger.HLTfilters.hltLevel1GTSeed_cfi import hltLevel1GTSeed
+#es_prefer_l1GtTriggerMaskTechTrig = cms.ESPrefer("L1GtTriggerMaskTechTrigTrivialProducer","l1GtTriggerMaskTechTrig")
+
+###bit 0 selection: BPTX_AND
+#bptxAnd = hltLevel1GTSeed.clone(L1TechTriggerSeeding = cms.bool(True), L1SeedsLogicalExpression = cms.string('0'))
+
+###HLT
+#from HLTrigger.HLTfilters.hltHighLevel_cfi import *
+#hltMinimumBiasSelection = hltHighLevel.clone(HLTPaths = cms.vstring("HLT_L1_BscMinBiasOR_BptxPlusORMinus","HLT_L1Tech_BSC_minBias_OR"), throw = cms.bool(False))
+
+#====================================================================================
 
 oneGoodVertexFilter = cms.EDFilter("VertexSelector",
                                    src = cms.InputTag("offlinePrimaryVertices"),
@@ -49,4 +71,5 @@ disp = cms.Sequence(
 #                       *nucl
 #		       )
 default = cms.Sequence(trackerOnlyConversionSequence*disp*conv*nucl)
+default_conv = cms.Sequence(trackerOnlyConversionSequence*conv)
 
