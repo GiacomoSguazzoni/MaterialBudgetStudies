@@ -38,24 +38,24 @@ process.nucl.simulation = cms.bool(True)
 # Track re-reco for conversion
 #------------------------------------------------------------------------------------
 
-##process.load('GammaConversion.TrackingForConversion.ModifyStdSequence_Slim_cff')
+process.load('GammaConversion.TrackingForConversion.ModifyStdSequence_Slim_cff')
 
-##process.localReco = cms.Sequence(process.siPixelRecHits*process.siStripMatchedRecHits)
+process.localReco = cms.Sequence(process.siPixelRecHits*process.siStripMatchedRecHits)
 
-##process.seventhSeedsTk.takeAll = False
-##process.seventhSeeds.takeAll = False
+process.seventhSeedsTk.takeAll = False
+process.seventhSeeds.takeAll = False
 
 ##---- Customize cut on max seed (increased of a factor 10)
-##process.seventhPLSeeds.OrderedHitsFactoryPSet.maxElement = cms.uint32(1000) #Default 
+process.seventhPLSeeds.OrderedHitsFactoryPSet.maxElement = cms.uint32(10000) #Default 1000
 
 #=====================================================================================
 
 ##process.p = cms.Path(process.bit40*process.noScraping*process.oneGoodVertexFilter*process.default)
-##process.p = cms.Path(process.localReco
-##                     *process.finaltrackCollectionMerging
-##                     *process.default)
+process.p = cms.Path(process.localReco
+                     *process.finaltrackCollectionMerging
+                     *process.default)
 
-process.p = cms.Path(process.default)
+##process.p = cms.Path(process.default)
 
 
 

@@ -5,10 +5,13 @@ process = cms.Process("Demo")
 process.load("Tests.MaterialNtuplizer.commonIncludes_MC_altTrig_cff")
 
 # Top level replacement
-from Configuration.GlobalRuns.customise_Collision_38X import customise
-customise(process)
+##from Configuration.GlobalRuns.customise_Collision_38X import customise
+##customise(process)
 
-process.GlobalTag.globaltag = "START38_V12::All"
+from Configuration.GlobalRuns.reco_TLR_39X import customisePPData
+customisePPData(process)
+ 
+process.GlobalTag.globaltag = "START39_V6::All"
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 source = cms.Source ("PoolSource",fileNames = readFiles, secondaryFileNames = secFiles)
@@ -46,7 +49,7 @@ process.seventhSeedsTk.takeAll = False
 process.seventhSeeds.takeAll = False
 
 ##---- Customize cut on max seed (increased of a factor 10)
-process.seventhPLSeeds.OrderedHitsFactoryPSet.maxElement = cms.uint32(1000) #Default 
+process.seventhPLSeeds.OrderedHitsFactoryPSet.maxElement = cms.uint32(10000) #Default 
 
 #=====================================================================================
 
