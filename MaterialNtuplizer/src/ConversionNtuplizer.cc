@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: ConversionNtuplizer.cc,v 1.9 2010/07/02 17:05:11 hlliu Exp $
+// $Id: ConversionNtuplizer.cc,v 1.11 2011/01/21 10:16:22 sguazz Exp $
 //
 //
 
@@ -229,7 +229,7 @@ ConversionNtuplizer::ConversionNtuplizer(const edm::ParameterSet& iConfig) :
 ConversionNtuplizer::~ConversionNtuplizer() { }
 
 void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  if (prints) cout << "new evt" << endl;
+  if (prints) std::cout << "new evt" << std::endl;
 
 #ifdef ADDONS
   edm::EventID eventId = iEvent.id();
@@ -484,23 +484,23 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   iSetup.get<IdealMagneticFieldRecord>().get(theMF);  
   
   //make conversion-vertex pair vector
-  if (prints) cout << "loop 1, converision size=" << pIn->size() << endl;
+  if (prints) std::cout << "loop 1, converision size=" << pIn->size() << endl;
   for (ConversionCollection::const_iterator conv = pIn->begin();conv!=pIn->end();++conv) {
     if (conv->nTracks()!=2) continue;
-    TrackRef tk1 = conv->tracks().front();
-    TrackRef tk2 = conv->tracks().back();
+    const edm::RefToBase<reco::Track> tk1 = conv->tracks().front();
+    const edm::RefToBase<reco::Track> tk2 = conv->tracks().back();
     if (tk1->charge()*tk2->charge()!=-1) continue;
-    //if (prints) cout << "tk1 q=" << tk1->charge() << " pt=" << tk1->pt() << " dxy=" << tk1->dxy() << endl;
-    //if (prints) cout << "tk2 q=" << tk2->charge() << " pt=" << tk2->pt() << " dxy=" << tk2->dxy() << endl;
+    //if (prints) std::cout << "tk1 q=" << tk1->charge() << " pt=" << tk1->pt() << " dxy=" << tk1->dxy() << endl;
+    //if (prints) std::cout << "tk2 q=" << tk2->charge() << " pt=" << tk2->pt() << " dxy=" << tk2->dxy() << endl;
     vector<RefCountedKinematicParticle> allParticles;
     KinematicParticleFactoryFromTransientTrack pFactory;
     const ParticleMass elecMass = 0.000000511;
-    const TransientTrack tt1 = (*theB).build(tk1);
-    const TransientTrack tt2 = (*theB).build(tk2);
+    const TransientTrack tt1 = (*theB).build(*tk1);
+    const TransientTrack tt2 = (*theB).build(*tk2);
     KinematicVertex tv;
     bool validVtx=false;
     if (redovtx) {
-      if (prints) cout << "make vtx" << endl;
+      if (prints) std::cout << "make vtx" << endl;
       float sigma = 0.00000000001;
       allParticles.push_back(pFactory.particle (tt1,elecMass,0.,0.,sigma));
       allParticles.push_back(pFactory.particle (tt2,elecMass,0.,0.,sigma));
@@ -524,9 +524,9 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       }
     }
     if (!validVtx) continue;
-    if (prints) cout << "pushing vtx" << endl;
+    if (prints) std::cout << "pushing vtx" << endl;
     conversionVertices.push_back(make_pair<unsigned int,KinematicVertex>(conv-pIn->begin(),tv));
-    //if (prints) cout << "converted photon with valid vertex at R=" << tv.position().perp() 
+    //if (prints) std::cout << "converted photon with valid vertex at R=" << tv.position().perp() 
     //<< " pt=" << sqrt(photonMom.perp2())
     //<< endl;
   }
@@ -534,7 +534,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   vector<PhotonMCTruth> mcPhotons;
   if (simulation) {
     //compute efficiency
-    if (prints) cout << "get sim stuff" << endl;
+    if (prints) std::cout << "get sim stuff" << endl;
     //get sim info
     std::vector<SimTrack> theSimTracks;
     std::vector<SimVertex> theSimVertices;
@@ -546,7 +546,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     theSimTracks.insert(theSimTracks.end(),SimTk->begin(),SimTk->end());
     theSimVertices.insert(theSimVertices.end(),SimVtx->begin(),SimVtx->end());
     mcPhotons=thePhotonMCTruthFinder_->find(theSimTracks,  theSimVertices);
-    if (prints) cout << "loop over sim, size=" << mcPhotons.size() << endl;
+    if (prints) std::cout << "loop over sim, size=" << mcPhotons.size() << endl;
     for (vector<PhotonMCTruth>::const_iterator iPho=mcPhotons.begin(); iPho !=mcPhotons.end(); ++iPho ) {
       std::vector<ElectronMCTruth> electrons = (*iPho).electrons();
       if ( (!(*iPho).isAConversion()) || electrons.size()!=2 ) continue;
@@ -564,7 +564,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       if (fabs(mcPhoEta)>maxPhoEtaForEffic) continue;
       if (fabs(mcPhoZ)>maxPhoZForEffic) continue;
       if (mcPhoR>maxPhoRForEffic) continue;
-      if (prints) cout << "fill mc plots" << endl;
+      if (prints) std::cout << "fill mc plots" << endl;
 
       s2rbranch.q1 = electrons[0].simTracks().charge();
       s2rbranch.pt1 = mcElecPt1;
@@ -623,11 +623,11 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 #endif
 
       //look for matching reco conversion
-      if (prints) cout << "look for match" << endl;
+      if (prints) std::cout << "look for match" << endl;
       bool assoc = false;
       //bool cuts = false;
       RefVector<TrackingParticleCollection> tpc;
-      if (prints) cout << "look for match.. again" << endl;
+      if (prints) std::cout << "look for match.. again" << endl;
       if (hitassoc) { 
 	tpc = RefVector<TrackingParticleCollection>(TPCollectionH.id());
 	for (unsigned int j=0; j<TPCollectionH->size();j++) {
@@ -640,12 +640,12 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 		(fabs(tptest->p4().y()-electrons[1].fourMomentum().y())<0.0001) &&
 		(fabs(tptest->p4().z()-electrons[1].fourMomentum().z())<0.0001) )
 	      ) {
-	    //cout << "pushing tp=" << tptest->p4() << " e0=" << electrons[0].fourMomentum() << " e1=" << electrons[1].fourMomentum() << endl;
+	    //std::cout << "pushing tp=" << tptest->p4() << " e0=" << electrons[0].fourMomentum() << " e1=" << electrons[1].fourMomentum() << endl;
 	    tpc.push_back(tptest);
 	  }
 	}
       }
-      if (prints) cout << "conversionVertices.size()=" << conversionVertices.size() << endl;
+      if (prints) std::cout << "conversionVertices.size()=" << conversionVertices.size() << endl;
       double deltaR  = 999;
       double deltaZ  = 999;
       double deltaPt = 999;
@@ -673,9 +673,9 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       for (vector<conversionVertex>::iterator rcv=conversionVertices.begin();rcv!=conversionVertices.end();++rcv) {
 	const Conversion& conv = (*pIn)[rcv->first];
 	KinematicVertex& vtx = rcv->second;
-	if (prints) cout << "got vtx" << endl;
-	TrackRef tk1 = conv.tracks().front();
-	TrackRef tk2 = conv.tracks().back();
+	if (prints) std::cout << "got vtx" << endl;
+	const edm::RefToBase<reco::Track> tk1 = conv.tracks().front();
+	const edm::RefToBase<reco::Track> tk2 = conv.tracks().back();
 	double recoPhoR = vtx.position().perp();
 	math::XYZVector photonMom = tk1->momentum()+tk2->momentum();
 	double recoPhoPt = sqrt(photonMom.perp2());
@@ -716,7 +716,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	  RefToBaseVector<Track> tc;
 	  tc.push_back(tfrb1);
 	  tc.push_back(tfrb2);
-	  if (prints) cout << "associating tc.size()=" << tc.size() << " tpc.size()=" << tpc.size() << endl;
+	  if (prints) std::cout << "associating tc.size()=" << tc.size() << " tpc.size()=" << tpc.size() << endl;
 	  SimToRecoCollection q = theAssociator->associateSimToReco(tc,tpc,&iEvent);
 	  try { 
 	    std::vector<std::pair<RefToBase<Track>, double> > trackV1 = q[tpc[0]];
@@ -725,12 +725,12 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	    RefToBase<Track> tr1 = trackV1.front().first;
 	    RefToBase<Track> tr2 = trackV2.front().first;
 	    //double frac1 = trackV1.front().second;double frac2 = trackV2.front().second;
-	    if (prints) cout << "sim converted photon with p=" << (*iPho).fourMomentum() << " (pt=" << (*iPho).fourMomentum().perp()
+	    if (prints) std::cout << "sim converted photon with p=" << (*iPho).fourMomentum() << " (pt=" << (*iPho).fourMomentum().perp()
 		 << ") associated to reco conversion with p=" << tr1->momentum()+tr2->momentum() << endl;
-	    //cout << "associated tp1 to track with p=" << tr1->momentum() << " pT=" << tr1->pt() << " frac=" << frac1 << endl;
-	    //cout << "associated tp2 to track with p=" << tr2->momentum() << " pT=" << tr2->pt() << " frac=" << frac2 << endl;
+	    //std::cout << "associated tp1 to track with p=" << tr1->momentum() << " pT=" << tr1->pt() << " frac=" << frac1 << endl;
+	    //std::cout << "associated tp2 to track with p=" << tr2->momentum() << " pT=" << tr2->pt() << " frac=" << frac2 << endl;
 	  } catch (Exception event) {
-	    //cout << "continue: " << event.what()  << endl;
+	    //std::cout << "continue: " << event.what()  << endl;
 	    continue;
 	  }
 	  assoc = true;
@@ -744,7 +744,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
           if ( ! associationCondition ) continue;
 	  assoc = true;
 	}
-	if (prints) cout << "associated" << endl;
+	if (prints) std::cout << "associated" << endl;
 	s2rbranch.isAssoc =1;
 	s2rbranch.deltapt =deltaPt;
 	s2rbranch.deltaphi =deltaPhi;
@@ -851,7 +851,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   }
   
   //compute purity and plot residues
-  if (prints) cout << "loop on reco, size=" << conversionVertices.size() << endl;
+  if (prints) std::cout << "loop on reco, size=" << conversionVertices.size() << endl;
 #ifdef ADDONS
   const static unsigned short PatternSize = 25;
   const static unsigned short HitSize = 11;
@@ -859,9 +859,9 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   for (vector<conversionVertex>::iterator rcv=conversionVertices.begin();rcv!=conversionVertices.end();++rcv) {
     const Conversion& conv = (*pIn)[rcv->first];
     KinematicVertex& vtx = rcv->second;
-    if (prints) cout << "got vtx" << endl;
-    TrackRef tk1 = conv.tracks().front();
-    TrackRef tk2 = conv.tracks().back();     
+    if (prints) std::cout << "got vtx" << endl;
+    edm::RefToBase<reco::Track> tk1 = conv.tracks().front();
+    edm::RefToBase<reco::Track> tk2 = conv.tracks().back();     
     math::XYZVector photonMom = tk1->momentum()+tk2->momentum();
     double recoPhoPt = sqrt(photonMom.perp2());
     //double recoPhoEta = photonMom.eta();
@@ -882,10 +882,10 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     double deltaX = 999;
     double deltaY = 999;
 
-    if(prints) cout<<"converted photon with valid vertex at R="<<vtx.position().perp()<<" pt="<<sqrt(photonMom.perp2())
+    if(prints) std::cout<<"converted photon with valid vertex at R="<<vtx.position().perp()<<" pt="<<sqrt(photonMom.perp2())
 		   <<" tk1pT="<<conv.tracks().front()->pt()<<" tk2pT="<<conv.tracks().back()->pt()<<endl;
     //reco plots
-    if (prints) cout << "fill reco plots" << endl;
+    if (prints) std::cout << "fill reco plots" << endl;
 
     r2sbranch.q1 =tk1->charge();
     r2sbranch.nHits1 =hitstk1;
@@ -978,8 +978,8 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	has_refit = true;
       }
     }
-    const TransientTrack ttk_l(tk1, magField);
-    const TransientTrack ttk_r(tk2, magField);
+    const TransientTrack ttk_l(*tk1, magField);
+    const TransientTrack ttk_r(*tk2, magField);
 
     const HitPattern & pattern1 = tk1->hitPattern();
     const HitPattern & pattern2 = tk2->hitPattern();
@@ -1109,7 +1109,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     bool associated = false;
     if (simulation) {
       double simPhoR(0), simPhoZ(0), simPhoEta(0), simPhoPt(0), simPhoPhi(0), simPhoTheta(0);
-      if (prints) cout << "check assoc" << endl;
+      if (prints) std::cout << "check assoc" << endl;
       if (hitassoc) {
 	RefToBase<Track> tfrb1(tk1);
 	RefToBase<Track> tfrb2(tk2);
@@ -1154,25 +1154,25 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 		    deltaX = tpr1->parentVertex()->position().x()-vtx.position().x();
 		    deltaY = tpr1->parentVertex()->position().y()-vtx.position().y();
 		    deltaZ = tpr1->parentVertex()->position().z()-vtx.position().z();
-		    if (prints) cout << "reco converted photon with p=" << photonMom << " (pt=" << sqrt(photonMom.Perp2())
+		    if (prints) std::cout << "reco converted photon with p=" << photonMom << " (pt=" << sqrt(photonMom.Perp2())
 				     << ") associated to reco conversion with p=" << (*tpr1->parentVertex()->sourceTracks_begin())->momentum()
 				     << " recoR=" << recoPhoR << " simR=" << simPhoR << endl;
-		    //cout << "associated track1 to " << tpr1->pdgId() << " with p=" << tpr1->p4() << " with pT=" << tpr1->pt() << endl;
-		    //cout << "associated track2 to " << tpr2->pdgId() << " with p=" << tpr2->p4() << " with pT=" << tpr2->pt() << endl;
+		    //std::cout << "associated track1 to " << tpr1->pdgId() << " with p=" << tpr1->p4() << " with pT=" << tpr1->pt() << endl;
+		    //std::cout << "associated track2 to " << tpr2->pdgId() << " with p=" << tpr2->p4() << " with pT=" << tpr2->pt() << endl;
 		    associated = true;
 		  }
 		}
 	      }
 	    }
 	  } catch (Exception event) {
-	    //cout << "do not continue: " << event.what()  << endl;
+	    //std::cout << "do not continue: " << event.what()  << endl;
 	    //continue;
 	  }
 	}
       } else {
 	vector<PhotonMCTruth>::const_iterator iPho;
 	for (iPho=mcPhotons.begin(); iPho !=mcPhotons.end(); ++iPho ) {
-	  if (prints) cout << "in loop over mc photons" << endl;
+	  if (prints) std::cout << "in loop over mc photons" << endl;
 	  simPhoR = (*iPho).vertex().perp();
 	  simPhoZ = (*iPho).vertex().z();
 	  simPhoEta = (*iPho).fourMomentum().eta();
@@ -1192,7 +1192,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	      associationCondition =(fabs(deltaX)<10. && fabs(deltaY)<10. &&fabs(deltaZ)<10.);
 	    
 	    if ( associationCondition ) {
-	      //if (prints) cout << "recV=" << vtx.position() << " simV=" << (*iPho).vertex() << " deltaR=" << vtx.position().perp()-(*iPho).vertex().perp() << " deltaPt=" << sqrt(photonMom.perp2())-(*iPho).fourMomentum().perp() << endl;
+	      //if (prints) std::cout << "recV=" << vtx.position() << " simV=" << (*iPho).vertex() << " deltaR=" << vtx.position().perp()-(*iPho).vertex().perp() << " deltaPt=" << sqrt(photonMom.perp2())-(*iPho).fourMomentum().perp() << endl;
 	      associated = true;
 	      deltaR  = recoPhoR-simPhoR;
 	      deltaPt = recoPhoPt-simPhoPt;
@@ -1204,7 +1204,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	}
       }    
       if (associated) {
-	if (prints) cout << "associated" << endl;
+	if (prints) std::cout << "associated" << endl;
 	//residue
 	r2sbranch.isAssoc =1;
 	r2sbranch.deltapt =deltaPt;
@@ -1216,9 +1216,9 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       }
     }
     ntupleR2S->Fill();    
-    if (prints) cout << "end of loop" << endl;
+    if (prints) std::cout << "end of loop" << endl;
   }  
-  if (prints) cout << "end of event" << endl;
+  if (prints) std::cout << "end of event" << endl;
 }
 
 

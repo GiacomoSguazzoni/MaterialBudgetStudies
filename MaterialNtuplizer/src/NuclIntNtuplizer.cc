@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.6 2010/06/02 11:56:28 cerati Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.7 2010/07/20 15:37:52 mgouzevi Exp $
 //
 //
 
@@ -580,8 +580,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     
     for (ConversionCollection::const_iterator conv = pInConv->begin();conv!=pInConv->end();++conv) {
       if (conv->nTracks()!=2) continue;
-      TrackRef tk1 = conv->tracks().front();
-      TrackRef tk2 = conv->tracks().back();
+      const edm::RefToBase<reco::Track> tk1 = conv->tracks().front();
+      const edm::RefToBase<reco::Track> tk2 = conv->tracks().back();
       for (Vertex::trackRef_iterator tk=rni->tracks_begin();tk!=rni->tracks_end();++tk){
 	if (fabs((*tk)->pt()-tk1->pt()) < 1e-6 || fabs((*tk)->pt()-tk2->pt()) < 1e-6) isAssosToTrkOnlyConv = true;
       }
