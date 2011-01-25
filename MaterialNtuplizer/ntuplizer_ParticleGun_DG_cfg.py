@@ -34,6 +34,7 @@ process.nucl.simulation = cms.bool(True)
 
 #=====================================================================================
 
+
 #------------------------------------------------------------------------------------
 # Track re-reco for conversion
 #------------------------------------------------------------------------------------
@@ -48,11 +49,20 @@ process.seventhSeeds.takeAll = False
 ##---- Customize cut on max seed (increased of a factor 10)
 process.seventhPLSeeds.OrderedHitsFactoryPSet.maxElement = cms.uint32(10000) #Default 1000
 
+#------------------------------------------------------
+# Conversion Re-reco (39x)
+#------------------------------------------------------
+process.load('RecoEgamma.EgammaPhotonProducers.conversionTrackSequence_cff')
+process.conversionTrackSequenceNoEcalSeeded = cms.Sequence(process.generalConversionTrackProducer) #*gsfConversionTrackProducer*gsfGeneralConversionTrackMerger)
+process.trackerOnlyConversions.src = cms.InputTag("generalConversionTrackProducer")
+
 #=====================================================================================
 
 ##process.p = cms.Path(process.bit40*process.noScraping*process.oneGoodVertexFilter*process.default)
 process.p = cms.Path(process.localReco
                      *process.finaltrackCollectionMerging
+                     *process.conversionTrackSequenceNoEcalSeeded
+                     *process.trackerOnlyConversionSequence
                      *process.default)
 
 ##process.p = cms.Path(process.default)
