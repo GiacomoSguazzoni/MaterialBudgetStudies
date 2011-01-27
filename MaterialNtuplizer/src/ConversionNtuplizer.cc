@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: ConversionNtuplizer.cc,v 1.11 2011/01/21 10:16:22 sguazz Exp $
+// $Id: ConversionNtuplizer.cc,v 1.12 2011/01/21 11:34:35 sguazz Exp $
 //
 //
 
@@ -132,8 +132,6 @@ typedef struct {
   int npHits1, npHits2;//pixel hits
   int nsHits1, nsHits2;//strip stereo hits
   int beforeHits1, beforeHits2;//num of hits before vertex
-  float ix1, iy1, iz1, ox1, oy1, oz1;
-  float ix2, iy2, iz2, ox2, oy2, oz2;
   float r_pt1, r_phi1, r_theta1, r_d01;//refitted tracks
   float r_pt2, r_phi2, r_theta2, r_d02;
   float ipx1, ipy1, ipz1;//momentum at vertex
@@ -143,8 +141,6 @@ typedef struct {
   float r_pt, r_phi, r_theta;
   float vx, vy, vz;//primary vertex position
   float bsx, bsy, bsz;
-  float lambdaError1, lambdaError2;
-  float tx, ty, tz;//track analytical X
   float mass;//photon invariant mass by conv->mass()
   float chi2prob;
 #endif
@@ -170,8 +166,9 @@ private:
   
   TFile * file;
   std::string outfile;
-  bool redovtx;
+  bool generalTkOnly;
   bool hitassoc;
+  bool retracking;
   double minPhoPtForEffic;
   double maxPhoEtaForEffic;
   double maxPhoZForEffic;
@@ -207,8 +204,9 @@ private:
 //
 ConversionNtuplizer::ConversionNtuplizer(const edm::ParameterSet& iConfig) :
   outfile(iConfig.getParameter<std::string>("outfile")),
-  redovtx(iConfig.getParameter<bool>("redovtx")),
+  generalTkOnly(iConfig.getParameter<bool>("generalTkOnly")),
   hitassoc(iConfig.getParameter<bool>("hitassoc")),
+  retracking(iConfig.getParameter<bool>("retracking")),
   minPhoPtForEffic(iConfig.getParameter<double>("minPhoPtForEffic")),
   maxPhoEtaForEffic(iConfig.getParameter<double>("maxPhoEtaForEffic")),
   maxPhoZForEffic(iConfig.getParameter<double>("maxPhoZForEffic")),
@@ -379,7 +377,6 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   r2sbranch.minapp =0;
 
 #ifdef ADDONS
-  r2sbranch.lambdaError2 =0;
   r2sbranch.npHits2 =0;
   r2sbranch.nsHits2 =0;
   r2sbranch.beforeHits2 =0;
@@ -391,24 +388,14 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   r2sbranch.r_px2 =0;
   r2sbranch.r_py2 =0;
   r2sbranch.r_pz2 =0;
-  r2sbranch.ix2 =0;
-  r2sbranch.iy2 =0;
-  r2sbranch.iz2 =0;
-  r2sbranch.ox2 =0;
-  r2sbranch.oy2 =0;
-  r2sbranch.oz2 =0;
   r2sbranch.ipx2 =0;
   r2sbranch.ipy2 =0;
   r2sbranch.ipz2 =0;
   r2sbranch.r_pt =0;
   r2sbranch.r_phi =0;
   r2sbranch.r_theta =0;
-  r2sbranch.tx =0;//analytical cross
-  r2sbranch.ty =0;
-  r2sbranch.tz =0;
   r2sbranch.mass = -1.;
   r2sbranch.refit = 0;
-  r2sbranch.lambdaError1 =0;
   r2sbranch.npHits1 =0;
   r2sbranch.nsHits1 =0;
   r2sbranch.beforeHits1 =0;
@@ -420,12 +407,6 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   r2sbranch.r_px1 =0;
   r2sbranch.r_py1 =0;
   r2sbranch.r_pz1 =0;
-  r2sbranch.ix1 =0;
-  r2sbranch.iy1 =0;
-  r2sbranch.iz1 =0;
-  r2sbranch.ox1 =0;
-  r2sbranch.oy1 =0;
-  r2sbranch.oz1 =0;
   r2sbranch.ipx1 =0;
   r2sbranch.ipy1 =0;
   r2sbranch.ipz1 =0;
@@ -466,10 +447,6 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   iEvent.getByLabel("trackerOnlyConversions",pIn);
   ESHandle<TransientTrackBuilder> theB;
   iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theB);
-  KalmanVertexFitter fitterKalm(true);
-  KinematicConstrainedVertexFitter fitter;
-  typedef pair<unsigned int,KinematicVertex> conversionVertex;
-  vector<conversionVertex> conversionVertices;
 
   ESHandle<TrackAssociatorBase> theAssociator;
   Handle<TrackingParticleCollection>  TPCollectionH ;
@@ -483,54 +460,6 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   iSetup.get<TrackerDigiGeometryRecord>().get(theG);
   iSetup.get<IdealMagneticFieldRecord>().get(theMF);  
   
-  //make conversion-vertex pair vector
-  if (prints) std::cout << "loop 1, converision size=" << pIn->size() << endl;
-  for (ConversionCollection::const_iterator conv = pIn->begin();conv!=pIn->end();++conv) {
-    if (conv->nTracks()!=2) continue;
-    const edm::RefToBase<reco::Track> tk1 = conv->tracks().front();
-    const edm::RefToBase<reco::Track> tk2 = conv->tracks().back();
-    if (tk1->charge()*tk2->charge()!=-1) continue;
-    //if (prints) std::cout << "tk1 q=" << tk1->charge() << " pt=" << tk1->pt() << " dxy=" << tk1->dxy() << endl;
-    //if (prints) std::cout << "tk2 q=" << tk2->charge() << " pt=" << tk2->pt() << " dxy=" << tk2->dxy() << endl;
-    vector<RefCountedKinematicParticle> allParticles;
-    KinematicParticleFactoryFromTransientTrack pFactory;
-    const ParticleMass elecMass = 0.000000511;
-    const TransientTrack tt1 = (*theB).build(*tk1);
-    const TransientTrack tt2 = (*theB).build(*tk2);
-    KinematicVertex tv;
-    bool validVtx=false;
-    if (redovtx) {
-      if (prints) std::cout << "make vtx" << endl;
-      float sigma = 0.00000000001;
-      allParticles.push_back(pFactory.particle (tt1,elecMass,0.,0.,sigma));
-      allParticles.push_back(pFactory.particle (tt2,elecMass,0.,0.,sigma));
-      MultiTrackKinematicConstraint * colinearConstr = new  ColinearityKinematicConstraint(ColinearityKinematicConstraint::PhiTheta);
-      RefCountedKinematicTree myTree = fitter.fit(allParticles, colinearConstr);
-      if (myTree->isEmpty()) continue;
-      myTree->movePointerToTheTop();
-      tv = *(myTree->currentDecayVertex());
-      validVtx = tv.vertexIsValid();
-    } else {
-      vector<reco::TransientTrack> t_tks;
-      t_tks.push_back(tt1);
-      t_tks.push_back(tt2);
-      if ( conv->conversionVertex().isValid() ) {
-	GlobalPoint point(conv->conversionVertex().position().x(),conv->conversionVertex().position().y(),conv->conversionVertex().position().z());
-	GlobalError error(conv->conversionVertex().error()(0,0),conv->conversionVertex().error()(1,0),conv->conversionVertex().error()(1,1),
-			  conv->conversionVertex().error()(2,2),conv->conversionVertex().error()(2,1),conv->conversionVertex().error()(2,2));
-	TransientVertex tv2(point, error, t_tks, conv->conversionVertex().chi2(),conv->conversionVertex().ndof());
-	tv = KinematicVertex(tv2.vertexState(),tv2.totalChiSquared(),tv2.degreesOfFreedom());
-	validVtx = true;
-      }
-    }
-    if (!validVtx) continue;
-    if (prints) std::cout << "pushing vtx" << endl;
-    conversionVertices.push_back(make_pair<unsigned int,KinematicVertex>(conv-pIn->begin(),tv));
-    //if (prints) std::cout << "converted photon with valid vertex at R=" << tv.position().perp() 
-    //<< " pt=" << sqrt(photonMom.perp2())
-    //<< endl;
-  }
-
   vector<PhotonMCTruth> mcPhotons;
   if (simulation) {
     //compute efficiency
@@ -559,7 +488,6 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       double mcPhoPhi = (*iPho).fourMomentum().phi();
       double mcPhoR = (*iPho).vertex().perp();
       double mcPhoZ = (*iPho).vertex().z();
-      //if (mcPhoPt<2.5||mcElecPt1<1.||mcElecPt2<1.) continue;
       if (mcPhoPt<minPhoPtForEffic) continue;
       if (fabs(mcPhoEta)>maxPhoEtaForEffic) continue;
       if (fabs(mcPhoZ)>maxPhoZForEffic) continue;
@@ -645,7 +573,6 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	  }
 	}
       }
-      if (prints) std::cout << "conversionVertices.size()=" << conversionVertices.size() << endl;
       double deltaR  = 999;
       double deltaZ  = 999;
       double deltaPt = 999;
@@ -670,14 +597,23 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       int theAlgo2 = 999;
 #endif
 
-      for (vector<conversionVertex>::iterator rcv=conversionVertices.begin();rcv!=conversionVertices.end();++rcv) {
-	const Conversion& conv = (*pIn)[rcv->first];
-	KinematicVertex& vtx = rcv->second;
-	if (prints) std::cout << "got vtx" << endl;
+      for (ConversionCollection::const_iterator it = pIn->begin();it!=pIn->end();++it) {
+	const Conversion& conv = (*it);
+
+        if ( generalTkOnly ) {//only check with general tracks. High purity flag always ON (suggested by Nancy)
+	  if (! ( conv.quality(reco::Conversion::generalTracksOnly)  && conv.quality(reco::Conversion::highPurity) ) ) continue;
+	} else {
+	  if (! (conv.quality(reco::Conversion::highPurity))  ) continue;
+	}
+
+	if (conv.nTracks()!=2) continue;
+	const Vertex& vtx = conv.conversionVertex();
+	if (!(vtx.isValid())) continue;
 	const edm::RefToBase<reco::Track> tk1 = conv.tracks().front();
 	const edm::RefToBase<reco::Track> tk2 = conv.tracks().back();
-	double recoPhoR = vtx.position().perp();
-	math::XYZVector photonMom = tk1->momentum()+tk2->momentum();
+	double recoPhoR = vtx.position().Rho();
+	//math::XYZVector photonMom = tk1->momentum()+tk2->momentum();
+	math::XYZVector photonMom = conv.refittedPairMomentum();
 	double recoPhoPt = sqrt(photonMom.perp2());
 	deltaX = (*iPho).vertex().x()-vtx.position().x();
 	deltaY = (*iPho).vertex().y()-vtx.position().y();
@@ -687,52 +623,61 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	deltaPhi = photonMom.phi()-mcPhoPhi;
 	deltaTheta = photonMom.theta()-mcPhoTheta;
 #ifdef ADDONS
-	/*
-	PTrajectoryStateOnDet state1 = tk1->seedRef()->startingState();
-	DetId detId1(state1.detId());
-	TrajectoryStateOnSurface tsos1 = transformer.transientState( state1, &(theG->idToDet(detId1)->surface()), theMF.product());
-	PTrajectoryStateOnDet state2 = tk2->seedRef()->startingState();
-	DetId detId2(state2.detId());
-	TrajectoryStateOnSurface tsos2 = transformer.transientState( state2, &(theG->idToDet(detId2)->surface()), theMF.product());
-	qSeed1 = state1.parameters().charge();
-	ptSeed1 = tsos1.globalMomentum().perp();
-	phiSeed1 = tsos1.globalMomentum().phi();
-	thetaSeed1 = tsos1.globalMomentum().theta();
-	rSeed1 = tsos1.globalPosition().perp();
-	zSeed1 = tsos1.globalPosition().z();
-	qSeed2 = state2.parameters().charge();
-	ptSeed2 = tsos2.globalMomentum().perp();
-	phiSeed2 = tsos2.globalMomentum().phi();
-	thetaSeed2 = tsos2.globalMomentum().theta();
-	rSeed2 = tsos2.globalPosition().perp();
-	zSeed2 = tsos2.globalPosition().z();
-	*/
+
+	if (retracking){//if re-doing the tracking to test the dedicated tracking step. 
+	    //NOTE retracking should be set to False if reading conversions out of box because trajectory is not stored in RECO
+	    PTrajectoryStateOnDet state1 = tk1->seedRef()->startingState();
+	    DetId detId1(state1.detId());
+	    TrajectoryStateOnSurface tsos1 = transformer.transientState( state1, &(theG->idToDet(detId1)->surface()), theMF.product());
+	    PTrajectoryStateOnDet state2 = tk2->seedRef()->startingState();
+	    DetId detId2(state2.detId());
+	    TrajectoryStateOnSurface tsos2 = transformer.transientState( state2, &(theG->idToDet(detId2)->surface()), theMF.product());
+	    qSeed1 = state1.parameters().charge();
+	    ptSeed1 = tsos1.globalMomentum().perp();
+	    phiSeed1 = tsos1.globalMomentum().phi();
+	    thetaSeed1 = tsos1.globalMomentum().theta();
+	    rSeed1 = tsos1.globalPosition().perp();
+	    zSeed1 = tsos1.globalPosition().z();
+	    qSeed2 = state2.parameters().charge();
+	    ptSeed2 = tsos2.globalMomentum().perp();
+	    phiSeed2 = tsos2.globalMomentum().phi();
+	    thetaSeed2 = tsos2.globalMomentum().theta();
+	    rSeed2 = tsos2.globalPosition().perp();
+	    zSeed2 = tsos2.globalPosition().z();
+	}
  	theAlgo1 = tk1->algo();
 	theAlgo2 = tk2->algo();
 #endif
 	if (hitassoc) {
 	  RefToBase<Track> tfrb1(tk1);
 	  RefToBase<Track> tfrb2(tk2);
-	  RefToBaseVector<Track> tc;
-	  tc.push_back(tfrb1);
-	  tc.push_back(tfrb2);
-	  if (prints) std::cout << "associating tc.size()=" << tc.size() << " tpc.size()=" << tpc.size() << endl;
-	  SimToRecoCollection q = theAssociator->associateSimToReco(tc,tpc,&iEvent);
-	  try { 
-	    std::vector<std::pair<RefToBase<Track>, double> > trackV1 = q[tpc[0]];
-	    std::vector<std::pair<RefToBase<Track>, double> > trackV2 = q[tpc[1]];
-	    if (!(trackV1.size()&&trackV2.size())) continue;
-	    RefToBase<Track> tr1 = trackV1.front().first;
-	    RefToBase<Track> tr2 = trackV2.front().first;
-	    //double frac1 = trackV1.front().second;double frac2 = trackV2.front().second;
-	    if (prints) std::cout << "sim converted photon with p=" << (*iPho).fourMomentum() << " (pt=" << (*iPho).fourMomentum().perp()
-		 << ") associated to reco conversion with p=" << tr1->momentum()+tr2->momentum() << endl;
-	    //std::cout << "associated tp1 to track with p=" << tr1->momentum() << " pT=" << tr1->pt() << " frac=" << frac1 << endl;
-	    //std::cout << "associated tp2 to track with p=" << tr2->momentum() << " pT=" << tr2->pt() << " frac=" << frac2 << endl;
-	  } catch (Exception event) {
-	    //std::cout << "continue: " << event.what()  << endl;
-	    continue;
+	  RefToBaseVector<Track> tc1, tc2;
+	  tc1.push_back(tfrb1);
+	  tc2.push_back(tfrb2);
+	  SimToRecoCollection q1 = theAssociator->associateSimToReco(tc1,tpc,&iEvent);
+	  SimToRecoCollection q2 = theAssociator->associateSimToReco(tc2,tpc,&iEvent);
+	  std::vector<std::pair<RefToBase<reco::Track>, double> > trackV1, trackV2;
+	  int tp_1 = 0, tp_2 = 1;//the index of associated tp in tpc for two tracks
+
+	  if (q1.find(tpc[0])!=q1.end()){
+	      trackV1 = (std::vector<std::pair<RefToBase<reco::Track>, double> >) q1[tpc[0]];
+	  } else if (q1.find(tpc[1])!=q1.end()){
+	      trackV1 = (std::vector<std::pair<RefToBase<reco::Track>, double> >) q1[tpc[1]];
+	      tp_1 = 1;
 	  }
+	  if (q2.find(tpc[1])!=q2.end()){
+	      trackV2 = (std::vector<std::pair<RefToBase<reco::Track>, double> >) q2[tpc[1]];
+	  } else if (q2.find(tpc[0])!=q2.end()){
+	      trackV2 = (std::vector<std::pair<RefToBase<reco::Track>, double> >) q2[tpc[0]];
+	      tp_2 = 0;
+	  }
+	  if (!(trackV1.size()&&trackV2.size()))
+	      continue;
+
+	  RefToBase<Track> tr1 = trackV1.front().first;
+	  RefToBase<Track> tr2 = trackV2.front().first;
+	  if (prints) std::cout << "sim converted photon with p=" << (*iPho).fourMomentum() << " (pt=" << (*iPho).fourMomentum().perp()
+	      << ") associated to reco conversion with p=" << tr1->momentum()+tr2->momentum() << endl;
 	  assoc = true;
 	} else {
           bool associationCondition = false;
@@ -839,7 +784,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	  s2rbranch.r_d01 = tk1->d0();
 	  s2rbranch.r_d02 = tk2->d0();
 	}
-	double chi2Prob = ChiSquaredProbability(vtx.chiSquared(), vtx.degreesOfFreedom());
+	double chi2Prob = ChiSquaredProbability(vtx.chi2(), vtx.ndof());
 	s2rbranch.r_chi2prob = chi2Prob;
 	s2rbranch.r_minapp = conv.distOfMinimumApproach();
 #endif
@@ -851,25 +796,29 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
   }
   
   //compute purity and plot residues
-  if (prints) std::cout << "loop on reco, size=" << conversionVertices.size() << endl;
 #ifdef ADDONS
   const static unsigned short PatternSize = 25;
   const static unsigned short HitSize = 11;
 #endif
-  for (vector<conversionVertex>::iterator rcv=conversionVertices.begin();rcv!=conversionVertices.end();++rcv) {
-    const Conversion& conv = (*pIn)[rcv->first];
-    KinematicVertex& vtx = rcv->second;
-    if (prints) std::cout << "got vtx" << endl;
+  for (ConversionCollection::const_iterator it = pIn->begin();it!=pIn->end();++it) {
+    const Conversion& conv = (*it);
+
+    if ( generalTkOnly ) {//only check with general tracks. High purity flag always ON (suggested by Nancy)
+	if (! ( conv.quality(reco::Conversion::generalTracksOnly)  && conv.quality(reco::Conversion::highPurity) ) ) continue;
+    } else {
+	if (! (conv.quality(reco::Conversion::highPurity))  ) continue;
+    }
+
+    if (conv.nTracks()!=2) continue;
+    const Vertex& vtx = conv.conversionVertex();
+    if (!(vtx.isValid())) continue;
+
     edm::RefToBase<reco::Track> tk1 = conv.tracks().front();
     edm::RefToBase<reco::Track> tk2 = conv.tracks().back();     
-    math::XYZVector photonMom = tk1->momentum()+tk2->momentum();
+    math::XYZVector photonMom = conv.refittedPairMomentum();
     double recoPhoPt = sqrt(photonMom.perp2());
-    //double recoPhoEta = photonMom.eta();
-    double recoPhoR = vtx.position().perp();
-    double chiSquaredVtx = vtx.chiSquared()/vtx.degreesOfFreedom();
-    //double recoPhotDot = photonMom.Dot(vtx.position());
-    //double r1=tk1->innerPosition().r();
-    //double r2=tk2->innerPosition().r();
+    double recoPhoR = vtx.position().Rho();
+    double chiSquaredVtx = vtx.chi2()/vtx.ndof();
     double chi2tk1=tk1->normalizedChi2();
     double chi2tk2=tk2->normalizedChi2();
     int hitstk1=tk1->numberOfValidHits();
@@ -882,8 +831,6 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     double deltaX = 999;
     double deltaY = 999;
 
-    if(prints) std::cout<<"converted photon with valid vertex at R="<<vtx.position().perp()<<" pt="<<sqrt(photonMom.perp2())
-		   <<" tk1pT="<<conv.tracks().front()->pt()<<" tk2pT="<<conv.tracks().back()->pt()<<endl;
     //reco plots
     if (prints) std::cout << "fill reco plots" << endl;
 
@@ -1012,10 +959,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       }
     }
 
-    TwoTrackMinimumDistance md;
-    md.calculate  (  ttk_l.initialFreeState(),  ttk_r.initialFreeState() );
-    GlobalPoint thecross = md.crossingPoint();
-    double chi2Prob = ChiSquaredProbability(vtx.chiSquared(), vtx.degreesOfFreedom());
+    double chi2Prob = ChiSquaredProbability(vtx.chi2(), vtx.ndof());
     //count hits before vertex
     int before_hit1 = 0, before_hit2 = 0;
 
@@ -1069,7 +1013,6 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       r2sbranch.r_phi =refit_photonMom.phi();
       r2sbranch.r_theta =refit_photonMom.theta();
     }
-    r2sbranch.lambdaError1 =tk1->lambdaError();
     r2sbranch.beforeHits1 =before_hit1;
     r2sbranch.npHits1 =np_hit1;
     r2sbranch.nsHits1 =ns_hit1;
@@ -1077,10 +1020,6 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     r2sbranch.ipx1 = ip1.x();
     r2sbranch.ipy1 = ip1.y();
     r2sbranch.ipz1 = ip1.z();
-    r2sbranch.ox1 =tk1->outerPosition().x();
-    r2sbranch.oy1 =tk1->outerPosition().y();
-    r2sbranch.oz1 =tk1->outerPosition().z();
-    r2sbranch.lambdaError2 =tk2->lambdaError();
     r2sbranch.beforeHits2 =before_hit2;
     r2sbranch.npHits2 =np_hit2;
     r2sbranch.nsHits2 =ns_hit2;
@@ -1088,13 +1027,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
     r2sbranch.ipx2 = ip2.x();
     r2sbranch.ipy2 = ip2.y();
     r2sbranch.ipz2 = ip2.z();
-    r2sbranch.ox2 =tk2->outerPosition().x();
-    r2sbranch.oy2 =tk2->outerPosition().y();
-    r2sbranch.oz2 =tk2->outerPosition().z();
     r2sbranch.chi2prob = chi2Prob;
-    r2sbranch.tx = thecross.x();
-    r2sbranch.ty = thecross.y();
-    r2sbranch.tz = thecross.z();
     r2sbranch.mass = conv.pairInvariantMass();
 #endif
 
@@ -1113,9 +1046,9 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
       if (hitassoc) {
 	RefToBase<Track> tfrb1(tk1);
 	RefToBase<Track> tfrb2(tk2);
-	RefToBaseVector<Track> tc;
-	tc.push_back(tfrb1);
-	tc.push_back(tfrb2);
+	RefToBaseVector<Track> tc1, tc2;
+	tc1.push_back(tfrb1);
+	tc2.push_back(tfrb2);
 	RefVector<TrackingParticleCollection> tpc(TPCollectionH.id());
 	for (unsigned int j=0; j<TPCollectionH->size();j++) {
 	  Ref<TrackingParticleCollection> tptest(TPCollectionH,j);
@@ -1134,46 +1067,48 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	  }
 	}
 	if (tpc.size()>0) {
-	  RecoToSimCollection p = theAssociator->associateRecoToSim(tc,tpc,&iEvent);
-	  try{ 
-	    std::vector<std::pair<TrackingParticleRef, double> > tp1 = p[tfrb1];
-	    std::vector<std::pair<TrackingParticleRef, double> > tp2 = p[tfrb2];
-	    if (tp1.size()&&tp2.size()) {
+	  RecoToSimCollection p1 = theAssociator->associateRecoToSim(tc1,tpc,&iEvent);
+	  RecoToSimCollection p2 = theAssociator->associateRecoToSim(tc2,tpc,&iEvent);
+	  std::vector<std::pair<TrackingParticleRef, double> > tp1, tp2;
+	  //std::vector<std::pair<TrackingParticleRef, double> > tp2 = p2[tfrb2];
+	  if (p1.find(tfrb1) != p1.end()){
+	      tp1 = p1[tfrb1];
+	  }
+	  if (p2.find(tfrb2) != p2.end()){
+	      tp2 = p2[tfrb2];
+	  }
+	  if (tp1.size()&&tp2.size()) {
 	      TrackingParticleRef tpr1 = tp1.front().first;
 	      TrackingParticleRef tpr2 = tp2.front().first;
 	      if (abs(tpr1->pdgId())==11&&abs(tpr2->pdgId())==11) {
-		if ( (tpr1->parentVertex()->sourceTracks_end()-tpr1->parentVertex()->sourceTracks_begin()==1) && 
-		     (tpr2->parentVertex()->sourceTracks_end()-tpr2->parentVertex()->sourceTracks_begin()==1)) {
-		  if (tpr1->parentVertex().key()==tpr2->parentVertex().key() && ((*tpr1->parentVertex()->sourceTracks_begin())->pdgId()==22)) {
-		    simPhoR = sqrt(tpr1->parentVertex()->position().Perp2());
-		    simPhoZ = tpr1->parentVertex()->position().z();
-		    simPhoEta = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().eta();
-		    simPhoPt = sqrt((*tpr1->parentVertex()->sourceTracks_begin())->momentum().Perp2());
-		    simPhoPhi = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().Phi();
-		    simPhoTheta = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().Theta();
-		    deltaX = tpr1->parentVertex()->position().x()-vtx.position().x();
-		    deltaY = tpr1->parentVertex()->position().y()-vtx.position().y();
-		    deltaZ = tpr1->parentVertex()->position().z()-vtx.position().z();
-		    if (prints) std::cout << "reco converted photon with p=" << photonMom << " (pt=" << sqrt(photonMom.Perp2())
-				     << ") associated to reco conversion with p=" << (*tpr1->parentVertex()->sourceTracks_begin())->momentum()
-				     << " recoR=" << recoPhoR << " simR=" << simPhoR << endl;
-		    //std::cout << "associated track1 to " << tpr1->pdgId() << " with p=" << tpr1->p4() << " with pT=" << tpr1->pt() << endl;
-		    //std::cout << "associated track2 to " << tpr2->pdgId() << " with p=" << tpr2->p4() << " with pT=" << tpr2->pt() << endl;
-		    associated = true;
+		  if ( (tpr1->parentVertex()->sourceTracks_end()-tpr1->parentVertex()->sourceTracks_begin()==1) && 
+			  (tpr2->parentVertex()->sourceTracks_end()-tpr2->parentVertex()->sourceTracks_begin()==1)) {
+		      if (tpr1->parentVertex().key()==tpr2->parentVertex().key() && ((*tpr1->parentVertex()->sourceTracks_begin())->pdgId()==22)) {
+			  simPhoR = sqrt(tpr1->parentVertex()->position().Perp2());
+			  simPhoZ = tpr1->parentVertex()->position().z();
+			  simPhoEta = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().eta();
+			  simPhoPt = sqrt((*tpr1->parentVertex()->sourceTracks_begin())->momentum().Perp2());
+			  simPhoPhi = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().Phi();
+			  simPhoTheta = (*tpr1->parentVertex()->sourceTracks_begin())->momentum().Theta();
+			  deltaX = tpr1->parentVertex()->position().x()-vtx.position().x();
+			  deltaY = tpr1->parentVertex()->position().y()-vtx.position().y();
+			  deltaZ = tpr1->parentVertex()->position().z()-vtx.position().z();
+			  if (prints) std::cout << "reco converted photon with p=" << photonMom << " (pt=" << sqrt(photonMom.Perp2())
+			      << ") associated to reco conversion with p=" << (*tpr1->parentVertex()->sourceTracks_begin())->momentum()
+				  << " recoR=" << recoPhoR << " simR=" << simPhoR << endl;
+			  //std::cout << "associated track1 to " << tpr1->pdgId() << " with p=" << tpr1->p4() << " with pT=" << tpr1->pt() << endl;
+			  //std::cout << "associated track2 to " << tpr2->pdgId() << " with p=" << tpr2->p4() << " with pT=" << tpr2->pt() << endl;
+			  associated = true;
+		      }
 		  }
-		}
 	      }
-	    }
-	  } catch (Exception event) {
-	    //std::cout << "do not continue: " << event.what()  << endl;
-	    //continue;
 	  }
 	}
       } else {
-	vector<PhotonMCTruth>::const_iterator iPho;
-	for (iPho=mcPhotons.begin(); iPho !=mcPhotons.end(); ++iPho ) {
-	  if (prints) std::cout << "in loop over mc photons" << endl;
-	  simPhoR = (*iPho).vertex().perp();
+	  vector<PhotonMCTruth>::const_iterator iPho;
+	  for (iPho=mcPhotons.begin(); iPho !=mcPhotons.end(); ++iPho ) {
+	      if (prints) std::cout << "in loop over mc photons" << endl;
+	      simPhoR = (*iPho).vertex().perp();
 	  simPhoZ = (*iPho).vertex().z();
 	  simPhoEta = (*iPho).fourMomentum().eta();
 	  simPhoPt = (*iPho).fourMomentum().perp();
@@ -1350,8 +1285,6 @@ ConversionNtuplizer::beginJob()
   ntupleR2S->Branch("nsHits2",&(r2sbranch.nsHits2),"nsHits2/I");
   ntupleR2S->Branch("missHits1",&(r2sbranch.missHits1),"missHits1/I");
   ntupleR2S->Branch("missHits2",&(r2sbranch.missHits2),"missHits2/I");
-  ntupleR2S->Branch("lambdaError1",&(r2sbranch.lambdaError1),"lambdaError1/F");
-  ntupleR2S->Branch("lambdaError2",&(r2sbranch.lambdaError2),"lambdaError2/F");
   ntupleR2S->Branch("refit",&(r2sbranch.refit),"refit/I");
   ntupleR2S->Branch("r_pt1",&(r2sbranch.r_pt1),"r_pt1/F");
   ntupleR2S->Branch("r_d01",&(r2sbranch.r_d01),"r_d01/F");
@@ -1363,12 +1296,6 @@ ConversionNtuplizer::beginJob()
   ntupleR2S->Branch("r_px1",&(r2sbranch.r_px1),"r_px1/F");
   ntupleR2S->Branch("r_py1",&(r2sbranch.r_py1),"r_py1/F");
   ntupleR2S->Branch("r_pz1",&(r2sbranch.r_pz1),"r_pz1/F");
-  ntupleR2S->Branch("ix1",&(r2sbranch.ix1),"ix1/F");
-  ntupleR2S->Branch("iy1",&(r2sbranch.iy1),"iy1/F");
-  ntupleR2S->Branch("iz1",&(r2sbranch.iz1),"iz1/F");
-  ntupleR2S->Branch("ox1",&(r2sbranch.ox1),"ox1/F");
-  ntupleR2S->Branch("oy1",&(r2sbranch.oy1),"oy1/F");
-  ntupleR2S->Branch("oz1",&(r2sbranch.oz1),"oz1/F");
   ntupleR2S->Branch("r_pt2",&(r2sbranch.r_pt2),"r_pt2/F");
   ntupleR2S->Branch("r_d02",&(r2sbranch.r_d02),"r_d02/F");
   ntupleR2S->Branch("r_phi2",&(r2sbranch.r_phi2),"r_phi2/F");
@@ -1379,21 +1306,12 @@ ConversionNtuplizer::beginJob()
   ntupleR2S->Branch("r_px2",&(r2sbranch.r_px2),"r_px2/F");
   ntupleR2S->Branch("r_py2",&(r2sbranch.r_py2),"r_py2/F");
   ntupleR2S->Branch("r_pz2",&(r2sbranch.r_pz2),"r_pz2/F");
-  ntupleR2S->Branch("ix2",&(r2sbranch.ix2),"ix2/F");
-  ntupleR2S->Branch("iy2",&(r2sbranch.iy2),"iy2/F");
-  ntupleR2S->Branch("iz2",&(r2sbranch.iz2),"iz2/F");
-  ntupleR2S->Branch("ox2",&(r2sbranch.ox2),"ox2/F");
-  ntupleR2S->Branch("oy2",&(r2sbranch.oy2),"oy2/F");
-  ntupleR2S->Branch("oz2",&(r2sbranch.oz2),"oz2/F");
   ntupleR2S->Branch("r_pt",&(r2sbranch.r_pt),"r_pt/F");
   ntupleR2S->Branch("r_phi",&(r2sbranch.r_phi),"r_phi/F");
   ntupleR2S->Branch("r_theta",&(r2sbranch.r_theta),"r_theta/F");
   ntupleR2S->Branch("vx",&(r2sbranch.vx),"vx/F");
   ntupleR2S->Branch("vy",&(r2sbranch.vy),"vy/F");
   ntupleR2S->Branch("vz",&(r2sbranch.vz),"vz/F");
-  ntupleR2S->Branch("tx",&(r2sbranch.tx),"tx/F");
-  ntupleR2S->Branch("ty",&(r2sbranch.ty),"ty/F");
-  ntupleR2S->Branch("tz",&(r2sbranch.tz),"tz/F");
   ntupleR2S->Branch("bsx",&(r2sbranch.bsx),"bsx/F");
   ntupleR2S->Branch("bsy",&(r2sbranch.bsy),"bsy/F");
   ntupleR2S->Branch("bsz",&(r2sbranch.bsz),"bsz/F");

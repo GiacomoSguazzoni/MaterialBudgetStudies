@@ -2,8 +2,9 @@ from FWCore.MessageService.MessageLogger_cfi import *
 
 conv = cms.EDAnalyzer('ConversionNtuplizer',
                       outfile = cms.string('ntuple_conversion.root'),
-                      redovtx = cms.bool(True),
+                      generalTkOnly = cms.bool(False),#if do only generalTracks or all merged tracks
                       hitassoc = cms.bool(False),
+		      retracking = cms.bool(False),#if re-doing tracking, for dedicated tracking test ONLY
                       minPhoPtForEffic = cms.double(0.3),#when hardcoded it was 2.5
                       maxPhoEtaForEffic = cms.double(2.5),
                       maxPhoZForEffic = cms.double(200.),
