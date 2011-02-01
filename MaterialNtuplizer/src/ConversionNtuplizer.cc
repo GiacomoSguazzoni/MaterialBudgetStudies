@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: ConversionNtuplizer.cc,v 1.12 2011/01/21 11:34:35 sguazz Exp $
+// $Id: ConversionNtuplizer.cc,v 1.13 2011/01/27 17:56:58 hlliu Exp $
 //
 //
 
@@ -602,8 +602,9 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 
         if ( generalTkOnly ) {//only check with general tracks. High purity flag always ON (suggested by Nancy)
 	  if (! ( conv.quality(reco::Conversion::generalTracksOnly)  && conv.quality(reco::Conversion::highPurity) ) ) continue;
-	} else {
-	  if (! (conv.quality(reco::Conversion::highPurity))  ) continue;
+	}
+	else {
+	  if (! ( conv.quality(reco::Conversion::arbitratedMerged) && conv.quality(reco::Conversion::highPurity))  ) continue;
 	}
 
 	if (conv.nTracks()!=2) continue;
