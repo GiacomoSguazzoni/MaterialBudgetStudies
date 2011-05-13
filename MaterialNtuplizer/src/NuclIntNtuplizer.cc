@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.7 2010/07/20 15:37:52 mgouzevi Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.8 2011/01/21 11:34:35 sguazz Exp $
 //
 //
 
@@ -80,6 +80,7 @@ typedef struct {
   float x, y, z, vtx_eta, vtx_phi;
   float deltapt, deltaphi, deltatheta, deltax, deltay, deltaz, 
     deltapt_InSim_OutRec, deltaphi_InSim_OutRec, deltatheta_InSim_OutRec;
+  float evt_NofflineVtx, evt_NdispVtx, evt_nTracks;
   std::vector<float> tkPt,tkEta,tkDxy,tkDz,tkRho;
   std::vector<int> tkHits,tkAlgo,tkOuter;
   std::vector<bool> tkPrimary, tkSecondary;
@@ -238,6 +239,11 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   r2sbranch.isTherePrimaryTrack = 0;
   r2sbranch.isThereMergedTrack = 0;
 
+  r2sbranch.evt_NofflineVtx = 0; 
+  r2sbranch.evt_NdispVtx = 0; 
+  r2sbranch.evt_nTracks = 0;
+
+
   using namespace std;
   using namespace edm;
   using namespace reco;
@@ -254,6 +260,10 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     the_pvtx = *(vertexHandle->begin());
     valid_pvtx = true;
   }
+
+
+  Handle<TrackCollection> tracksIn;
+  iEvent.getByLabel("generalTracks",tracksIn);
 
   Handle<ConversionCollection> pInConv;
   iEvent.getByLabel("trackerOnlyConversions",pInConv);
@@ -413,6 +423,11 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     if(prints) cout<<"nuclear interaction at R="<<sqrt(rni->position().Perp2())<<" pt="<<sqrt(momIncRec.Perp2())<<endl;
 
     if (prints) cout << "fill reco" << endl;
+
+
+    r2sbranch.evt_NofflineVtx = vertexHandle->size(); 
+    r2sbranch.evt_NdispVtx = pIn->size(); 
+    r2sbranch.evt_nTracks = tracksIn->size();
 
     r2sbranch.x =rni->position().x();
     r2sbranch.y =rni->position().y();
@@ -672,7 +687,9 @@ void NuclIntNtuplizer::beginJob() {
   ntupleR2S->Branch("nOutTkStep67Good", &(r2sbranch.nOutTkStep67Good),"nOutTkStep67Good/I");
   ntupleR2S->Branch("nOutTkStep67Poor", &(r2sbranch.nOutTkStep67Poor),"nOutTkStep67Poor/I");
 
-
+  ntupleR2S->Branch("evt_NofflineVtx", &(r2sbranch.evt_NofflineVtx), "evt_NofflineVtx/F");
+  ntupleR2S->Branch("evt_NdispVtx", &(r2sbranch.evt_NdispVtx), "evt_NdispVtx/F");
+  ntupleR2S->Branch("evt_nTracks", &(r2sbranch.evt_nTracks), "evt_nTracks/F");
 
   ntupleR2S->Branch("x",&(r2sbranch.x),"x/F");
   ntupleR2S->Branch("y",&(r2sbranch.y),"y/F");
