@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.8 2011/01/21 11:34:35 sguazz Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.9 2011/05/13 19:58:43 mgouzevi Exp $
 //
 //
 
@@ -80,7 +80,7 @@ typedef struct {
   float x, y, z, vtx_eta, vtx_phi;
   float deltapt, deltaphi, deltatheta, deltax, deltay, deltaz, 
     deltapt_InSim_OutRec, deltaphi_InSim_OutRec, deltatheta_InSim_OutRec;
-  float evt_NofflineVtx, evt_NdispVtx, evt_nTracks;
+  float evt_NofflineVtx, evt_NdispVtx, evt_nTracks, evt_nHits, evt_nTkHits;
   std::vector<float> tkPt,tkEta,tkDxy,tkDz,tkRho;
   std::vector<int> tkHits,tkAlgo,tkOuter;
   std::vector<bool> tkPrimary, tkSecondary;
@@ -242,6 +242,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   r2sbranch.evt_NofflineVtx = 0; 
   r2sbranch.evt_NdispVtx = 0; 
   r2sbranch.evt_nTracks = 0;
+  r2sbranch.evt_nHits = 0;
+  r2sbranch.evt_nTkHits = 0;
 
 
   using namespace std;
@@ -260,6 +262,27 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     the_pvtx = *(vertexHandle->begin());
     valid_pvtx = true;
   }
+
+  // add nHits information
+
+  Handle<std::map<unsigned int, int> > ndigi;
+  bool bHits = iEvent.getByLabel("pixClus", ndigi);
+  double nHits = 0;
+ 
+  if (bHits)
+    for(std::map<unsigned int,int>::const_iterator digi=ndigi->begin();digi!=ndigi->end(); digi++)  nHits += digi->second;
+
+  
+
+  Handle<std::map<unsigned int, int> > nTKdigi;
+  bool bTkHits = iEvent.getByLabel("tkClus", nTKdigi);
+  double nTkHits = 0;
+ 
+  if (bTkHits)
+    for(std::map<unsigned int,int>::const_iterator digi=nTKdigi->begin();digi!=nTKdigi->end(); digi++)  nTkHits += digi->second;
+
+
+
 
 
   Handle<TrackCollection> tracksIn;
@@ -428,6 +451,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.evt_NofflineVtx = vertexHandle->size(); 
     r2sbranch.evt_NdispVtx = pIn->size(); 
     r2sbranch.evt_nTracks = tracksIn->size();
+    r2sbranch.evt_nHits = nHits;
+    r2sbranch.evt_nTkHits = nTkHits;
 
     r2sbranch.x =rni->position().x();
     r2sbranch.y =rni->position().y();
@@ -690,6 +715,8 @@ void NuclIntNtuplizer::beginJob() {
   ntupleR2S->Branch("evt_NofflineVtx", &(r2sbranch.evt_NofflineVtx), "evt_NofflineVtx/F");
   ntupleR2S->Branch("evt_NdispVtx", &(r2sbranch.evt_NdispVtx), "evt_NdispVtx/F");
   ntupleR2S->Branch("evt_nTracks", &(r2sbranch.evt_nTracks), "evt_nTracks/F");
+  ntupleR2S->Branch("evt_nHits", &(r2sbranch.evt_nHits), "evt_nHits/F");
+  ntupleR2S->Branch("evt_nTkHits", &(r2sbranch.evt_nTkHits), "evt_nTkHits/F");
 
   ntupleR2S->Branch("x",&(r2sbranch.x),"x/F");
   ntupleR2S->Branch("y",&(r2sbranch.y),"y/F");
