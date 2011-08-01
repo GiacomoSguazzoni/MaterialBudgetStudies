@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.9 2011/05/13 19:58:43 mgouzevi Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.10 2011/05/16 16:00:53 mgouzevi Exp $
 //
 //
 
@@ -34,6 +34,7 @@ Implementation:
 #include "DataFormats/ParticleFlowReco/interface/PFDisplacedVertex.h"
 #include "DataFormats/ParticleFlowReco/interface/PFDisplacedVertexFwd.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
+#include "DataFormats/BeamSpot/interface/BeamSpot.h"
 
 #include "SimTracker/Records/interface/TrackAssociatorRecord.h"
 #include "SimDataFormats/TrackingAnalysis/interface/TrackingVertexContainer.h"
@@ -81,8 +82,9 @@ typedef struct {
   float deltapt, deltaphi, deltatheta, deltax, deltay, deltaz, 
     deltapt_InSim_OutRec, deltaphi_InSim_OutRec, deltatheta_InSim_OutRec;
   float evt_NofflineVtx, evt_NdispVtx, evt_nTracks, evt_nHits, evt_nTkHits;
-  std::vector<float> tkPt,tkEta,tkDxy,tkDz,tkRho;
-  std::vector<int> tkHits,tkAlgo,tkOuter;
+  float evt_bsx0, evt_bsy0,evt_bsz0,evt_bssigmaz,evt_bsdxdz,evt_bsdydz, evt_bsBeamWidthX, evt_bsBeamWidthY;
+  std::vector<float> tkPt,tkEta,tkDxy,tkDz,tkRho,tkDxy_min,tkDz_min,tkDxyForDzMin,tkDzForDxyMin;
+  std::vector<int> tkHits,tkAlgo,tkOuter,minDxyVertexNumber,minDzVertexNumber;
   std::vector<bool> tkPrimary, tkSecondary;
 
 } RECOTOSIM;
@@ -245,6 +247,14 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   r2sbranch.evt_nHits = 0;
   r2sbranch.evt_nTkHits = 0;
 
+  r2sbranch.evt_bsx0 = 0.;
+  r2sbranch.evt_bsy0 = 0.;
+  r2sbranch.evt_bsz0 = 0.;
+  r2sbranch.evt_bssigmaz = 0.;
+  r2sbranch.evt_bsdxdz = 0.;
+  r2sbranch.evt_bsdydz = 0.;
+  r2sbranch.evt_bsBeamWidthX = 0.;
+  r2sbranch.evt_bsBeamWidthY = 0.;
 
   using namespace std;
   using namespace edm;
@@ -282,7 +292,38 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     for(std::map<unsigned int,int>::const_iterator digi=nTKdigi->begin();digi!=nTKdigi->end(); digi++)  nTkHits += digi->second;
 
 
+  //
+  // Access beam spot information
+  //
+  reco::BeamSpot beamSpot;
+  edm::Handle<reco::BeamSpot> beamSpotHandle;
+  iEvent.getByLabel("offlineBeamSpot", beamSpotHandle);
 
+  double bsx0 = 0.;
+  double bsy0 = 0.;
+  double bsz0 = 0.;
+  double bssigmaz = 0.;
+  double bsdxdz = 0.;
+  double bsdydz = 0.;
+  double bsBeamWidthX = 0.;
+  double bsBeamWidthY = 0.;
+
+  if ( beamSpotHandle.isValid() ) {
+    beamSpot = *beamSpotHandle;
+    
+    bsx0 = beamSpot.x0();
+    bsy0 = beamSpot.y0();
+    bsz0 = beamSpot.z0();
+    bssigmaz = beamSpot.sigmaZ();
+    bsdxdz = beamSpot.dxdz();
+    bsdydz = beamSpot.dydz();
+    bsBeamWidthX = beamSpot.BeamWidthX();
+    bsBeamWidthY = beamSpot.BeamWidthY();
+    
+  }
+
+  // End of beam spot
+  //
 
 
   Handle<TrackCollection> tracksIn;
@@ -431,6 +472,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   
   //compute purity and plot residues
   if (prints) cout << "loop on reco, size=" << pIn->size() << endl;
+
   for (PFDisplacedVertexCollection::const_iterator rni=pIn->begin();rni!=pIn->end();++rni) {
 
     if (rni->isFake()) continue;
@@ -453,6 +495,15 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.evt_nTracks = tracksIn->size();
     r2sbranch.evt_nHits = nHits;
     r2sbranch.evt_nTkHits = nTkHits;
+
+    r2sbranch.evt_bsx0 = bsx0;        
+    r2sbranch.evt_bsy0 = bsy0;  
+    r2sbranch.evt_bsz0 = bsz0;  
+    r2sbranch.evt_bssigmaz = bssigmaz;
+    r2sbranch.evt_bsdxdz = bsdxdz;
+    r2sbranch.evt_bsdydz = bsdydz;
+    r2sbranch.evt_bsBeamWidthX = bsBeamWidthX;
+    r2sbranch.evt_bsBeamWidthY = bsBeamWidthY;
 
     r2sbranch.x =rni->position().x();
     r2sbranch.y =rni->position().y();
@@ -485,7 +536,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.isLooper = rni->isLooper();
     r2sbranch.isFake = rni->isFake();
 
-    r2sbranch.tkPt = std::vector<float>();
+    r2sbranch.tkPt  = std::vector<float>();
     r2sbranch.tkEta = std::vector<float>();
     r2sbranch.tkDxy = std::vector<float>();
     r2sbranch.tkDz = std::vector<float>();
@@ -495,6 +546,15 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.tkOuter = std::vector<int>();
     r2sbranch.tkPrimary = std::vector<bool>();
     r2sbranch.tkSecondary = std::vector<bool>();
+    
+    r2sbranch.tkDxy_min       = std::vector<float>();
+    r2sbranch.tkDzForDxyMin   = std::vector<float>();
+    r2sbranch.minDxyVertexNumber = std::vector<int>();
+
+    r2sbranch.tkDz_min        = std::vector<float>();
+    r2sbranch.tkDxyForDzMin   = std::vector<float>();
+    r2sbranch.minDzVertexNumber = std::vector<int>();
+
     int tkStep67Good = 0;
     int tkStep67Poor = 0;
 
@@ -520,6 +580,45 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	else tkStep67Poor++;
 	
       }
+
+      //
+      //
+      int num_iter = 0;
+
+      double dxy_min = 1000;
+      double dzForDxyMin = 1000;
+      int minDxyVtxNumber = 0;
+
+      double dz_min = 1000;
+      double dxyForDzMin = 1000;
+      int minDzVtxNumber = 0;
+      
+      for (reco::VertexCollection::const_iterator iter = vertexHandle->begin(); iter != vertexHandle->end(); iter++){
+	double dxy_min_new = (*tk)->dxy((*iter).position());
+	double dz_min_new = (*tk)->dz((*iter).position());
+	if (dxy_min_new < dxy_min) {
+	  dxy_min = dxy_min_new;
+	  dzForDxyMin = dz_min_new; 
+	  minDxyVtxNumber = num_iter;
+	}
+	if (dz_min_new < dz_min) {
+	  dz_min = dz_min_new;
+	  dxyForDzMin = dxy_min_new; 
+	  minDzVtxNumber = num_iter;
+	}
+	num_iter++;
+      }
+
+      r2sbranch.tkDxy_min.push_back(dxy_min);
+      r2sbranch.tkDzForDxyMin.push_back(dzForDxyMin);
+      r2sbranch.tkDz_min.push_back(dz_min);
+      r2sbranch.tkDxyForDzMin.push_back(dxyForDzMin);
+      r2sbranch.minDxyVertexNumber.push_back(minDxyVtxNumber);
+      r2sbranch.minDzVertexNumber.push_back(minDzVtxNumber);
+      
+      //
+      //
+
 
     }
 
@@ -718,6 +817,15 @@ void NuclIntNtuplizer::beginJob() {
   ntupleR2S->Branch("evt_nHits", &(r2sbranch.evt_nHits), "evt_nHits/F");
   ntupleR2S->Branch("evt_nTkHits", &(r2sbranch.evt_nTkHits), "evt_nTkHits/F");
 
+  ntupleR2S->Branch("bsx0",         &(r2sbranch.evt_bsx0),         "bsx0/F");
+  ntupleR2S->Branch("bsy0",         &(r2sbranch.evt_bsy0),         "bsy0/F");
+  ntupleR2S->Branch("bsz0",         &(r2sbranch.evt_bsz0),         "bsz0/F");
+  ntupleR2S->Branch("bssigmaz",     &(r2sbranch.evt_bssigmaz),     "bssigmaz/F");
+  ntupleR2S->Branch("bsdxdz",       &(r2sbranch.evt_bsdxdz),       "bsdxdz/F");
+  ntupleR2S->Branch("bsdydz",       &(r2sbranch.evt_bsdydz),       "bsdydz/F");
+  ntupleR2S->Branch("bsBeamWidthX", &(r2sbranch.evt_bsBeamWidthX), "bsBeamWidthX/F");
+  ntupleR2S->Branch("bsBeamWidthY", &(r2sbranch.evt_bsBeamWidthY), "bsBeamWidthY/F");
+
   ntupleR2S->Branch("x",&(r2sbranch.x),"x/F");
   ntupleR2S->Branch("y",&(r2sbranch.y),"y/F");
   ntupleR2S->Branch("z",&(r2sbranch.z),"z/F");
@@ -756,7 +864,15 @@ void NuclIntNtuplizer::beginJob() {
   ntupleR2S->Branch("tkOuter",&(r2sbranch.tkOuter));
   ntupleR2S->Branch("tkPrimary",&(r2sbranch.tkPrimary));
   ntupleR2S->Branch("tkSecondary",&(r2sbranch.tkSecondary));
-  
+
+  ntupleR2S->Branch("tkDxy_min",          &(r2sbranch.tkDxy_min));
+  ntupleR2S->Branch("tkDzForDxyMin",      &(r2sbranch.tkDzForDxyMin));
+  ntupleR2S->Branch("minDxyVertexNumber", &(r2sbranch.minDxyVertexNumber));
+
+  ntupleR2S->Branch("tkDz_min",          &(r2sbranch.tkDz_min));
+  ntupleR2S->Branch("tkDxyForDzMin",     &(r2sbranch.tkDxyForDzMin));
+  ntupleR2S->Branch("minDzVertexNumber", &(r2sbranch.minDzVertexNumber));
+
   TH1::AddDirectory(oldAddDir);
 }
 
