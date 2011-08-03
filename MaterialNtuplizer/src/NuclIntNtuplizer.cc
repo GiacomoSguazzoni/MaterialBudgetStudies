@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.10 2011/05/16 16:00:53 mgouzevi Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.11 2011/08/01 10:28:23 sguazz Exp $
 //
 //
 
@@ -330,7 +330,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   iEvent.getByLabel("generalTracks",tracksIn);
 
   Handle<ConversionCollection> pInConv;
-  iEvent.getByLabel("trackerOnlyConversions",pInConv);
+  //  iEvent.getByLabel("trackerOnlyConversions",pInConv);
+  iEvent.getByLabel("allConversions",pInConv);
 
 
   Handle<TrackingVertexCollection> SimVtx;

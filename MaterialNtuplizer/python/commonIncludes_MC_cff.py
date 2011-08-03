@@ -70,6 +70,9 @@ disp = cms.Sequence(
 #                       trackerOnlyConversionSequence*disp*conv#*convHit
 #                       *nucl
 #		       )
-default = cms.Sequence(trackerOnlyConversionSequence*disp*conv*nucl)
-default_conv = cms.Sequence(trackerOnlyConversionSequence*conv)
+#default = cms.Sequence(trackerOnlyConversionSequence*disp*conv*nucl)
+default = cms.Sequence(disp*conv*nucl)
+defaultOnlyConv = cms.Sequence(conv)
+defaultOnlyNucl = cms.Sequence(disp*nucl)
+#default_conv = cms.Sequence(trackerOnlyConversionSequence*conv)
 

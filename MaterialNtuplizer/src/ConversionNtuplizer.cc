@@ -13,7 +13,7 @@
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: ConversionNtuplizer.cc,v 1.13 2011/01/27 17:56:58 hlliu Exp $
+// $Id: ConversionNtuplizer.cc,v 1.14 2011/02/01 21:20:24 hlliu Exp $
 //
 //
 
@@ -444,7 +444,8 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 
   //make conversion vertices
   Handle<ConversionCollection> pIn;
-  iEvent.getByLabel("trackerOnlyConversions",pIn);
+  //  iEvent.getByLabel("trackerOnlyConversions",pIn);
+  iEvent.getByLabel("allConversions",pIn);
   ESHandle<TransientTrackBuilder> theB;
   iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theB);
 
@@ -614,7 +615,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 	const edm::RefToBase<reco::Track> tk2 = conv.tracks().back();
 	double recoPhoR = vtx.position().Rho();
 	//math::XYZVector photonMom = tk1->momentum()+tk2->momentum();
-	math::XYZVector photonMom = conv.refittedPairMomentum();
+	math::XYZVectorF photonMom = conv.refittedPairMomentum();
 	double recoPhoPt = sqrt(photonMom.perp2());
 	deltaX = (*iPho).vertex().x()-vtx.position().x();
 	deltaY = (*iPho).vertex().y()-vtx.position().y();
@@ -816,7 +817,7 @@ void ConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetu
 
     edm::RefToBase<reco::Track> tk1 = conv.tracks().front();
     edm::RefToBase<reco::Track> tk2 = conv.tracks().back();     
-    math::XYZVector photonMom = conv.refittedPairMomentum();
+    math::XYZVectorF photonMom = conv.refittedPairMomentum();
     double recoPhoPt = sqrt(photonMom.perp2());
     double recoPhoR = vtx.position().Rho();
     double chiSquaredVtx = vtx.chi2()/vtx.ndof();

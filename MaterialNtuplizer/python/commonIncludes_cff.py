@@ -48,5 +48,10 @@ disp = cms.Sequence(
 #                       trackerOnlyConversionSequence*disp*conv#*convHit
 #                       *nucl
 #		       )
-default = cms.Sequence(trackerOnlyConversionSequence*disp*conv*nucl)
+#
+# No more trackerOnlyConversionSequence but probably just conversionSequence
+#
+# but do we really need?
+
+default = cms.Sequence(disp*conv*nucl)
 
