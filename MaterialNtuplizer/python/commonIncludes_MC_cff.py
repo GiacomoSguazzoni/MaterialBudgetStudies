@@ -19,6 +19,7 @@ TrackAssociatorByHits.Purity_SimToReco = 0.5
 TrackAssociatorByHits.Cut_RecoToSim = 0.5
 
 from Tests.MaterialNtuplizer.ConversionNtuplizer_cfi import conv
+from Tests.MaterialNtuplizer.ConversionNtuplizer_cfi import newConv
 from Tests.MaterialNtuplizer.NuclIntNtuplizer_cfi import nucl
 #convHit = conv.clone(hitassoc = cms.bool(True))
 
@@ -73,6 +74,7 @@ disp = cms.Sequence(
 #default = cms.Sequence(trackerOnlyConversionSequence*disp*conv*nucl)
 default = cms.Sequence(disp*conv*nucl)
 defaultOnlyConv = cms.Sequence(conv)
+defaultOnlyNewConv = cms.Sequence(newConv)
 defaultOnlyNucl = cms.Sequence(disp*nucl)
 #default_conv = cms.Sequence(trackerOnlyConversionSequence*conv)
 
