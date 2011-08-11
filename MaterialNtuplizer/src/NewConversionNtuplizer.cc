@@ -14,7 +14,7 @@
 // Original Author:  Giuseppe Cerati
 // reorganized by:   Domenico Giordano
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NewConversionNtuplizer.cc,v 1.4 2011/01/21 11:34:35 sguazz dead $
+// $Id: NewConversionNtuplizer.cc,v 1.5 2011/08/08 10:33:03 sguazz Exp $
 //
 //
 
@@ -129,9 +129,9 @@ typedef struct{
     q = -999;
     pt = -999,  phi = -999,  theta = -999;
     px = -999,  py = -999,  pz = -999;
-    r = -999;
+    r = -999; //Not meangiful in particle
     chi2 = -999,  d0 = -999,  dz = -999;
-    x = -999,  y = -999,  z = -999;
+    x = -999,  y = -999,  z = -999; //Not meaningful in particle
     algo = -999;
     mass = -999;//photon invariant mass by conv->mass()
   }
@@ -157,8 +157,9 @@ typedef struct{
 } PARTICLEEXTRA;
 
 typedef struct { 
-  int isAssoc;
+  int isAssoc, isDouble;
   float x, y, z;
+  //float r, perp, theta, phi
   float deltapt, deltaphi, deltatheta, deltax, deltay, deltaz;
   float minapp, chi2;
   float chi2prob;
@@ -167,7 +168,8 @@ typedef struct {
 
   void init(){
     isAssoc=0;
-    x=-999; y=-999; z=-999;
+    isDouble=0;
+    x=-999; y=-999; z=-999; 
     //    deltapt=-999; deltaphi=-999; deltatheta=-999; deltax=-999; deltay=-999; deltaz=-999;
     deltapt=0.; deltaphi=0.; deltatheta=0.; deltax=0.; deltay=0.; deltaz=0.;
     minapp=-999; chi2=-999;
@@ -262,7 +264,7 @@ private:
   void fillR2SHitPattern(const edm::RefToBase<reco::Track> *tk);
   void fillR2SCrossingPoint(const Conversion& conv);
   void fillR2SQuality(const Conversion& conv);
-  void fillR2SAssociation(bool isAssoc, float deltaPt=0,float deltaPhi=0,float deltaTheta=0,float deltaX=0,float deltaY=0,float deltaZ=0);
+  void fillR2SAssociation(bool isDouble, float deltaPt=0,float deltaPhi=0,float deltaTheta=0,float deltaX=0,float deltaY=0,float deltaZ=0);
   int getBeforeHit(const edm::RefToBase<reco::Track> &tk, float recoPhoR, float vtx_z);
 
   void getSimulatedData(const edm::Event& iEvent, vector<PhotonMCTruth>& mcPhotons,const ConversionCollection* pIn);
@@ -271,13 +273,14 @@ private:
   
   GlobalVector getStateAtVertex(const edm::RefToBase<reco::Track> &tk, float recoPhoR,float vtx_z,float& iphi);
   void getConversionVertexPairs(const ConversionCollection* convColl);
+  void dumpDebugTable(const ConversionCollection* convColl);
   bool isConvQualityNotOk(ConversionCollection::const_iterator conv);
   bool getKinematicVertexFromConversion(vector<TransientTrack>& t_tks,ConversionCollection::const_iterator conv,KinematicVertex& kineVtx);
   void RefitVertex(vector<TransientTrack>& t_tks, KinematicVertex& kineVtx);
   void tryRefit(const Conversion& conv);
   
   void AssociateByKineConstraints(vector<PhotonMCTruth>& mcPhotons,KinematicVertex& vtx,const edm::RefToBase<reco::Track> *arrayTK);
-  void AssociateByKineConstraintsImproved(vector<PhotonMCTruth>& mcPhotons,KinematicVertex& vtx,const edm::RefToBase<reco::Track> *arrayTK);
+  void AssociateByKineConstraintsImproved(vector<PhotonMCTruth>& mcPhotons,KinematicVertex& vtx,const edm::RefToBase<reco::Track> *arrayTK, vector<bool>& doubleCounterCheck);
   bool isSimVertexOutsideAssCut(KinematicVertex& vtx, const PhotonMCTruth& Pho);
   void AssociateByHit(const edm::Event& iEvent,const Conversion& conv);
   void SearchTrackingParticleConversionCandidates( RefVector<TrackingParticleCollection>& tpc);
@@ -451,6 +454,10 @@ void NewConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventS
  
 void NewConversionNtuplizer::
 getReconstructedData(const edm::Event& iEvent,const ConversionCollection* pIn,vector<PhotonMCTruth>& mcPhotons){
+
+  vector<bool> doubleCounterCheck;
+  doubleCounterCheck.assign(mcPhotons.size(),false);
+
   for (vector<conversionVertex>::iterator rcv=conversionVertices.begin();rcv!=conversionVertices.end();++rcv) {
     const Conversion& conv = (*pIn)[rcv->first];
 
@@ -479,7 +486,7 @@ getReconstructedData(const edm::Event& iEvent,const ConversionCollection* pIn,ve
 	AssociateByHit(iEvent,conv);
       } else {
 	//AssociateByKineConstraints(mcPhotons,vtx,arrayTK);
-	AssociateByKineConstraintsImproved(mcPhotons,vtx,arrayTK);
+	AssociateByKineConstraintsImproved(mcPhotons,vtx,arrayTK,doubleCounterCheck);
       }    
       
     }
@@ -568,6 +575,7 @@ NewConversionNtuplizer::beginJob()
   ntupleR2S->Branch("event",		&(evtbranch.event),		"event/I");
 
   ntupleR2S->Branch("isAssoc",		&(r2sbranch.convvtx.isAssoc),	"isAssoc/I");
+  ntupleR2S->Branch("isDouble",		&(r2sbranch.convvtx.isDouble),	"isDouble/I");
   
   for(size_t i=0;i<2;i++){
     ntupleR2S->Branch(stringTochar(	"q"		+c[i])	,		&(r2sbranch.recoLeg[i].q),     	 	stringTochar(	"q"		+c[i]+"/I"));
@@ -1012,6 +1020,74 @@ getConversionVertexPairs(const ConversionCollection* convColl){
   }
 }
 
+void NewConversionNtuplizer::
+dumpDebugTable(const ConversionCollection* convColl){
+  if (prints) cout << "loop 1, conversion size=" << convColl->size() << endl;
+  
+  conversionVertices.clear();
+  for (ConversionCollection::const_iterator conv = convColl->begin();conv!=convColl->end();++conv) {
+    
+    //    if ( isConvQualityNotOk(conv) ) continue;
+
+    const edm::RefToBase<reco::Track> tk1 = conv->tracks().front();
+    const edm::RefToBase<reco::Track> tk2 = conv->tracks().back();
+    
+    vector< reco::TransientTrack > t_tks;
+    t_tks.push_back(_TransientTrackBuilder->build(*tk1));
+    t_tks.push_back(_TransientTrackBuilder->build(*tk2));
+    
+    cout << ">>>>>>>>>>>>>>> New reco conversion found >>>>>>>>>>>>>>>>>>>>>" << endl;
+    cout << ">>>vtx "
+	 << " x=" << conv->conversionVertex().position().x() 
+	 << " y=" << conv->conversionVertex().position().y() 
+	 << " z=" << conv->conversionVertex().position().z() 
+	 << endl; 
+
+    int iGeneralTracksOnly = 0;		 
+    int iArbitratedEcalSeeded = 0;	 
+    int iArbitratedMerged = 0;		 
+    int iArbitratedMergedEcalGeneral = 0; 
+    int iHighPurity = 0;			 
+    int iHighEfficiency = 0;		 
+    int iEcalMatched1Track = 0;		 
+    int iEcalMatched2Track = 0;           
+
+    if ( conv->quality(reco::Conversion::generalTracksOnly) )           iGeneralTracksOnly = 1;
+    if ( conv->quality(reco::Conversion::arbitratedEcalSeeded) )        iArbitratedEcalSeeded = 1;
+    if ( conv->quality(reco::Conversion::arbitratedMerged) )            iArbitratedMerged = 1;
+    if ( conv->quality(reco::Conversion::arbitratedMergedEcalGeneral) ) iArbitratedMergedEcalGeneral = 1;
+    if ( conv->quality(reco::Conversion::highPurity) )                  iHighPurity = 1;
+    if ( conv->quality(reco::Conversion::highEfficiency) )              iHighEfficiency = 1;
+    if ( conv->quality(reco::Conversion::ecalMatched1Track) )           iEcalMatched1Track = 1;
+    if ( conv->quality(reco::Conversion::ecalMatched2Track) )           iEcalMatched2Track = 1;           
+    cout << ">>>vtx flags"
+	 << " gto =" << iGeneralTracksOnly		  
+	 << " aes =" << iArbitratedEcalSeeded	 
+	 << " am  =" << iArbitratedMerged		 
+	 << " ameg=" << iArbitratedMergedEcalGeneral 
+	 << " hp  =" << iHighPurity			 
+	 << " he  =" << iHighEfficiency		 
+	 << " em1t=" << iEcalMatched1Track		 
+	 << " em2t=" << iEcalMatched2Track            
+	 << endl; 
+
+    cout << ">>>track 1"
+	 << " p="  << tk1->outerP() 
+	 << " pt=" << tk1->outerPt() 
+	 << " th=" << tk1->outerTheta() 
+	 << " ph=" << tk1->outerPhi() 
+	 << endl; 
+
+    cout << ">>>track 2"
+	 << " p="  << tk2->outerP() 
+	 << " pt=" << tk2->outerPt() 
+	 << " th=" << tk2->outerTheta() 
+	 << " ph=" << tk2->outerPhi() 
+	 << endl; 
+
+  }
+}
+
 bool NewConversionNtuplizer::      
 getKinematicVertexFromConversion(vector<TransientTrack>& t_tks,ConversionCollection::const_iterator conv,KinematicVertex& kineVtx){
   if ( !conv->conversionVertex().isValid() ) 
@@ -1061,12 +1137,13 @@ tryRefit(const Conversion& conv){
 bool NewConversionNtuplizer::
 isConvQualityNotOk(ConversionCollection::const_iterator conv){
 
+  /*
   if ( generalTkOnly ) {//only check with general tracks. High purity flag always ON (suggested by Nancy)
-    if (! ( conv->quality(reco::Conversion::generalTracksOnly)  && conv->quality(reco::Conversion::highPurity) ) ) return true;
+    if (! (conv->quality(reco::Conversion::generalTracksOnly) && conv->quality(reco::Conversion::highPurity)) ) return true;
+  } else {
+    if (! (conv->quality(reco::Conversion::arbitratedMerged)  && conv->quality(reco::Conversion::highPurity)) ) return true;
   }
-  else {
-    if (! ( conv->quality(reco::Conversion::arbitratedMerged) && conv->quality(reco::Conversion::highPurity))  ) return true;
-  }
+  */
 
   if (conv->nTracks()!=2) return true;
   
@@ -1110,11 +1187,12 @@ fillR2SQuality(const Conversion& conv){
 }
 
 void NewConversionNtuplizer::
-fillR2SAssociation(bool isAssoc, float deltaPt,float deltaPhi,float deltaTheta,float deltaX,float deltaY,float deltaZ){
+fillR2SAssociation(bool isDouble, float deltaPt,float deltaPhi,float deltaTheta,float deltaX,float deltaY,float deltaZ){
   if (prints) cout << "associated" << endl;
   //residue
-  r2sbranch.convvtx.isAssoc =isAssoc;
-  r2sbranch.convvtx.deltapt =deltaPt;
+  r2sbranch.convvtx.isAssoc  =true;
+  r2sbranch.convvtx.isDouble =isDouble;
+  r2sbranch.convvtx.deltapt  =deltaPt;
   r2sbranch.convvtx.deltaphi =deltaPhi;
   r2sbranch.convvtx.deltatheta =deltaTheta;
   r2sbranch.convvtx.deltax = deltaX;
@@ -1168,7 +1246,8 @@ AssociateByKineConstraints(vector<PhotonMCTruth>& mcPhotons,KinematicVertex& vtx
 }
 
 void NewConversionNtuplizer::
-AssociateByKineConstraintsImproved(vector<PhotonMCTruth>& mcPhotons,KinematicVertex& vtx, const edm::RefToBase<reco::Track> *arrayTK){
+AssociateByKineConstraintsImproved(vector<PhotonMCTruth>& mcPhotons,KinematicVertex& vtx, const edm::RefToBase<reco::Track> *arrayTK,
+vector<bool>& doubleCounterCheck){
   double simPhoR(0), simPhoZ(0), simPhoEta(0), simPhoPt(0), simPhoPhi(0), simPhoTheta(0);
 
   math::XYZVector photonMom = arrayTK[0]->momentum()+arrayTK[1]->momentum();
@@ -1181,8 +1260,11 @@ AssociateByKineConstraintsImproved(vector<PhotonMCTruth>& mcPhotons,KinematicVer
   double deltay = 0.;
   double deltaz = 0.;
   bool iMatch = false;
+  int iDCOfLastAssociated=-1;
 
   vector<PhotonMCTruth>::const_iterator iPho;
+
+  int iDC=-1;
 
   for (iPho=mcPhotons.begin(); iPho !=mcPhotons.end(); ++iPho ) {
     if (prints) cout << "in loop over mc photons" << endl;
@@ -1192,6 +1274,8 @@ AssociateByKineConstraintsImproved(vector<PhotonMCTruth>& mcPhotons,KinematicVer
     simPhoPt    = (*iPho).fourMomentum().perp();
     simPhoPhi   = (*iPho).fourMomentum().phi();
     simPhoTheta = (*iPho).fourMomentum().theta();
+
+    iDC++;
     
     //Is the sim photon is not valid? Yes: skip to next.
     if ( 
@@ -1220,6 +1304,7 @@ AssociateByKineConstraintsImproved(vector<PhotonMCTruth>& mcPhotons,KinematicVer
 
     //Match is found
     iMatch = true;
+    iDCOfLastAssociated = iDC;
 
     //Store relevant information for later
     deltax = tmpDeltax;
@@ -1228,11 +1313,15 @@ AssociateByKineConstraintsImproved(vector<PhotonMCTruth>& mcPhotons,KinematicVer
     deltaRho = photonMom.rho()-simPhoPt;
     deltaPhi = photonMom.phi()-simPhoPhi;
     deltaTheta = photonMom.theta()-simPhoTheta;
+   
     
   }
   
-  if ( iMatch ) fillR2SAssociation(true, deltaRho, deltaPhi, deltaTheta,
+  if ( iMatch ){ 
+      fillR2SAssociation(doubleCounterCheck[iDCOfLastAssociated], deltaRho, deltaPhi, deltaTheta,
 				   deltax, deltay, deltaz);
+      doubleCounterCheck[iDCOfLastAssociated]=true;
+  }
   
 }
 
