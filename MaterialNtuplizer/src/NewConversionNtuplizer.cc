@@ -14,7 +14,7 @@
 // Original Author:  Giuseppe Cerati
 // reorganized by:   Domenico Giordano
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NewConversionNtuplizer.cc,v 1.5 2011/08/08 10:33:03 sguazz Exp $
+// $Id: NewConversionNtuplizer.cc,v 1.6 2011/08/11 22:42:17 sguazz Exp $
 //
 //
 
@@ -216,6 +216,7 @@ typedef struct {
   
   PARTICLEDATA mcPhoton;
   PARTICLEDATA recoPhoton;
+  PARTICLEDATA refitPhoton;
   VERTEXDATA   convvtx;
   VERTEXQUALITY quality;
 
@@ -232,6 +233,7 @@ typedef struct {
     }
     mcPhoton.init();
     recoPhoton.init();
+    refitPhoton.init();
     convvtx.init();
     quality.init();
   }
@@ -259,7 +261,7 @@ private:
   
   void getReconstructedData(const edm::Event& iEvent,const ConversionCollection* pIn,vector<PhotonMCTruth>& mcPhotons);
     
-  void fillR2S(const edm::RefToBase<reco::Track> *tk, bool valid_pvtx, reco::Vertex &the_pvtx, KinematicVertex& vtx );
+  void fillR2S(const Conversion& conv, const edm::RefToBase<reco::Track> *tk, bool valid_pvtx, reco::Vertex &the_pvtx, KinematicVertex& vtx );
   void fillR2S_refit(Track **tk, bool valid_pvtx, reco::Vertex &the_pvtx );
   void fillR2SHitPattern(const edm::RefToBase<reco::Track> *tk);
   void fillR2SCrossingPoint(const Conversion& conv);
@@ -472,7 +474,7 @@ getReconstructedData(const edm::Event& iEvent,const ConversionCollection* pIn,ve
     //reco plots
     if (prints) cout << "fill reco plots" << endl;
     
-    fillR2S(arrayTK,valid_pvtx,the_pvtx,vtx);
+    fillR2S(conv, arrayTK,valid_pvtx,the_pvtx,vtx);
     fillR2SHitPattern(arrayTK);   //count hits before vertex
     tryRefit(conv);
     fillR2SCrossingPoint(conv);
@@ -618,10 +620,11 @@ NewConversionNtuplizer::beginJob()
   ntupleR2S->Branch("pt",		&(r2sbranch.recoPhoton.pt),		"pt/F");
   ntupleR2S->Branch("phi",		&(r2sbranch.recoPhoton.phi),		"phi/F");
   ntupleR2S->Branch("theta",		&(r2sbranch.recoPhoton.theta),		"theta/F");
-  ntupleR2S->Branch("r_pt",		&(r2sbranch.recoPhoton.pt),		"r_pt/F");
-  ntupleR2S->Branch("r_phi",		&(r2sbranch.recoPhoton.phi),		"r_phi/F");
-  ntupleR2S->Branch("r_theta",		&(r2sbranch.recoPhoton.theta),	        "r_theta/F");
   ntupleR2S->Branch("mass",		&(r2sbranch.recoPhoton.mass),		"mass/F");
+  ntupleR2S->Branch("r_pt",		&(r2sbranch.refitPhoton.pt),		"r_pt/F");
+  ntupleR2S->Branch("r_phi",		&(r2sbranch.refitPhoton.phi),		"r_phi/F");
+  ntupleR2S->Branch("r_theta",		&(r2sbranch.refitPhoton.theta),	        "r_theta/F");
+  ntupleR2S->Branch("r_mass",		&(r2sbranch.refitPhoton.mass),		"r_mass/F");
 
   ntupleR2S->Branch("chi2",		&(r2sbranch.convvtx.chi2),		"chi2/F");										
   ntupleR2S->Branch("deltapt",		&(r2sbranch.convvtx.deltapt),		"deltapt/F");
@@ -667,7 +670,7 @@ NewConversionNtuplizer::endJob() {
 
 
 
-void NewConversionNtuplizer::fillR2S(const edm::RefToBase<reco::Track> *tk, bool valid_pvtx, reco::Vertex &the_pvtx, KinematicVertex& vtx ){
+void NewConversionNtuplizer::fillR2S(const Conversion& conv, const edm::RefToBase<reco::Track> *tk, bool valid_pvtx, reco::Vertex &the_pvtx, KinematicVertex& vtx ){
   for(size_t i=0;i<2;i++){
     r2sbranch.recoLeg[i].q     =tk[i]->charge();
     r2sbranch.recoLeg[i].algo  =tk[i]->algo();
@@ -708,12 +711,12 @@ void NewConversionNtuplizer::fillR2S(const edm::RefToBase<reco::Track> *tk, bool
     r2sbranch.extrasLeg[i].lambdaError = tk[i]->lambdaError();
   }
 
-  math::XYZVector photonMom = tk[0]->momentum()+tk[1]->momentum();
+  //  math::XYZVector photonMom = tk[0]->momentum()+tk[1]->momentum();
+  math::XYZVectorF photonMom = conv.refittedPairMomentum();
   r2sbranch.recoPhoton.pt    = photonMom.rho();
   r2sbranch.recoPhoton.phi   = photonMom.phi();
   r2sbranch.recoPhoton.theta = photonMom.theta();
 
-  
   //FIXME dovrebbe essere piuttosto assegnato al vertice
   r2sbranch.convvtx.x    =vtx.position().x(); 
   r2sbranch.convvtx.y    =vtx.position().y();
@@ -750,12 +753,12 @@ void NewConversionNtuplizer::fillR2S_refit(Track **tk, bool valid_pvtx, reco::Ve
   }
   
   math::XYZVector refit_photonMom = tk[0]->momentum()+tk[1]->momentum();
- 
-  double refit_recoPhoPt = sqrt(refit_photonMom.perp2());
+
+  //  double refit_recoPhoPt = sqrt(refit_photonMom.perp2());
   
-  r2sbranch.recoPhoton.pt =refit_recoPhoPt;
-  r2sbranch.recoPhoton.phi =refit_photonMom.phi();
-  r2sbranch.recoPhoton.theta =refit_photonMom.theta();
+  r2sbranch.refitPhoton.pt = refit_photonMom.Rho();
+  r2sbranch.refitPhoton.phi = refit_photonMom.phi();
+  r2sbranch.refitPhoton.theta = refit_photonMom.theta();
 
 }
 
