@@ -14,7 +14,7 @@
 // Original Author:  Giuseppe Cerati
 // reorganized by:   Domenico Giordano
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NewConversionNtuplizer.cc,v 1.6 2011/08/11 22:42:17 sguazz Exp $
+// $Id: NewConversionNtuplizer.cc,v 1.7 2011/08/17 07:38:50 sguazz Exp $
 //
 //
 
@@ -106,11 +106,20 @@ using namespace reco;
 typedef struct {
   int run, event;
   unsigned int lumi;
-  
+
+  //Track counters
+  int nCkf, n1Tk, nGsf, nCkfInOut, nCkfOutIn,nRecoConv;
+
   void init(){
     run=0;
     event=0;
     lumi=0;
+    nCkf=0;
+    n1Tk=0;
+    nGsf=0;
+    nCkfInOut=0;
+    nCkfOutIn=0;
+    nRecoConv=0;
   }
 } EVT;
 
@@ -258,7 +267,8 @@ private:
   void setPrimaryVertex(reco::Vertex& pvtx);
   void setBeamSpot(const reco::BeamSpot* bs);
 
-  
+  int getNTracksFromCollection(const edm::Event& iEvent, edm::InputTag tag);
+
   void getReconstructedData(const edm::Event& iEvent,const ConversionCollection* pIn,vector<PhotonMCTruth>& mcPhotons);
     
   void fillR2S(const Conversion& conv, const edm::RefToBase<reco::Track> *tk, bool valid_pvtx, reco::Vertex &the_pvtx, KinematicVertex& vtx );
@@ -315,6 +325,11 @@ private:
   TFile * file;
   std::string outfile;
   edm::InputTag primaryVerticesTag;
+  edm::InputTag ckfTrackCollectionTag;
+  edm::InputTag singleLegTrackCollectionTag;
+  edm::InputTag gsfTrackCollectionTag;
+  edm::InputTag inOutTrackCollectionTag;
+  edm::InputTag outInTrackCollectionTag;
   bool generalTkOnly;
   bool redovtx;
   bool hitassoc;
@@ -330,8 +345,9 @@ private:
   bool simulation;
   bool prints;
 
+  int numberOfRecoConvInEvt;
 
- bool valid_pvtx;
+  bool valid_pvtx;
   //------------------------------------------------------------------------
   
   EVT          evtbranch;
@@ -374,7 +390,22 @@ NewConversionNtuplizer::NewConversionNtuplizer(const edm::ParameterSet& iConfig)
   prints(iConfig.getParameter<bool>("prints")) ,
   ntupleEvt(0),
   ntupleS2R(0),ntupleR2S(0)
-{ }
+{ 
+
+  //Track counters
+  ckfTrackCollectionTag = (iConfig.exists("ckfTrackCollectionTag")) 
+    ? iConfig.getParameter<InputTag>("ckfTrackCollectionTag") : edm::InputTag("generalTracks");
+  singleLegTrackCollectionTag = (iConfig.exists("singleLegTrackCollectionTag")) 
+    ? iConfig.getParameter<InputTag>("singleLegTrackCollectionTag") : edm::InputTag("convStepTracks");
+  gsfTrackCollectionTag = (iConfig.exists("gsfTrackCollectionTag")) 
+    ? iConfig.getParameter<InputTag>("gsfTrackCollectionTag") : edm::InputTag("electronGsfTracks");
+  //? iConfig.getParameter<InputTag>("gsfTrackCollectionTag") : edm::InputTag("gsfConversionTrackProducer");
+  inOutTrackCollectionTag = (iConfig.exists("inOutTrackCollectionTag")) 
+    ? iConfig.getParameter<InputTag>("inOutTrackCollectionTag") : edm::InputTag("ckfInOutTracksFromConversions");
+  outInTrackCollectionTag = (iConfig.exists("outInTrackCollectionTag")) 
+    ? iConfig.getParameter<InputTag>("outInTrackCollectionTag") : edm::InputTag("ckfOutInTracksFromConversions");
+
+}
 
 
 NewConversionNtuplizer::~NewConversionNtuplizer() { }
@@ -383,7 +414,7 @@ void NewConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventS
   if (prints) cout << "new evt" << endl;
 
   initStructs();
-
+  numberOfRecoConvInEvt=0;
 
   //-------------- Get ESHandles -----------//
   //get tracker geometry for hits positions
@@ -406,8 +437,6 @@ void NewConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventS
 
 
   //----------------------------------
-
-  setEvent(iEvent);
 
   //record the beam spot
   edm::Handle<reco::BeamSpot> bs;
@@ -449,8 +478,11 @@ void NewConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventS
   }
   
   //compute purity and plot residues
-  if (prints) cout << "loop on reco, size=" << conversionVertices.size() << endl;
+  numberOfRecoConvInEvt=conversionVertices.size();
+  if (prints) cout << "loop on reco, size=" << numberOfRecoConvInEvt << endl;
   getReconstructedData(iEvent,pIn.product(),mcPhotons);
+
+  setEvent(iEvent);
 
 }
  
@@ -508,12 +540,16 @@ NewConversionNtuplizer::beginJob()
   const bool oldAddDir = TH1::AddDirectoryStatus();
   TH1::AddDirectory(true);
 
-
   ntupleEvt = new TTree("ntupleEvt", "evt");
-  ntupleEvt->Branch("run",              &(evtbranch.run),"run/I");
-  ntupleEvt->Branch("event",		&(evtbranch.event),"event/I");
-  ntupleEvt->Branch("lumi",		&(evtbranch.lumi),"lumi/I");
-
+  ntupleEvt->Branch("run",              &(evtbranch.run),       "run/I");
+  ntupleEvt->Branch("event",		&(evtbranch.event),     "event/I");
+  ntupleEvt->Branch("lumi",		&(evtbranch.lumi),      "lumi/I");
+  ntupleEvt->Branch("nCkf",             &(evtbranch.nCkf),      "nCkf/I");     
+  ntupleEvt->Branch("n1Tk",             &(evtbranch.n1Tk),      "n1Tk/I");     
+  ntupleEvt->Branch("nGsf",             &(evtbranch.nGsf),      "nGsf/I");     
+  ntupleEvt->Branch("nCkfInOut",        &(evtbranch.nCkfInOut), "nCkfInOut/I");
+  ntupleEvt->Branch("nCkfOutIn",        &(evtbranch.nCkfOutIn), "nCkfOutIn/I"); 
+  ntupleEvt->Branch("nRecoConv",        &(evtbranch.nRecoConv), "nRecoConv/I"); 
   
   ntupleS2R = new TTree("ntupleS2R","sim2reco");
   ntupleS2R->Branch("run",		&(evtbranch.run),"run/I");
@@ -822,6 +858,15 @@ setEvent(const edm::Event& iEvent){
   evtbranch.event=iEvent.id().event();
   evtbranch.lumi  = iEvent.id().luminosityBlock();
 
+  //Count tracks from collections;
+  evtbranch.nCkf = getNTracksFromCollection(iEvent, ckfTrackCollectionTag);
+  evtbranch.n1Tk = getNTracksFromCollection(iEvent, singleLegTrackCollectionTag);
+  evtbranch.nGsf = getNTracksFromCollection(iEvent, gsfTrackCollectionTag);
+  evtbranch.nCkfInOut = getNTracksFromCollection(iEvent, inOutTrackCollectionTag);
+  evtbranch.nCkfOutIn = getNTracksFromCollection(iEvent, outInTrackCollectionTag);
+
+  evtbranch.nRecoConv = numberOfRecoConvInEvt;
+
   ntupleEvt->Fill();  
 }
 
@@ -839,6 +884,42 @@ setPrimaryVertex(reco::Vertex& pvtx){
   primaryvtx.y =pvtx.position().y();
   primaryvtx.z =pvtx.position().z();
 }
+
+
+int NewConversionNtuplizer::
+getNTracksFromCollection(const edm::Event& iEvent, edm::InputTag tag)
+{
+
+  /*
+  edm::Handle<reco::TrackCollection> tkCollection;
+  //  iEvent.getByType(tkCollection);
+  //  edm::Handle<edm::View<reco::Track> > tkRefCollection;
+ 
+  iEvent.getByLabel(tag, tkCollection);
+  if (!tkCollection.isValid()) {
+    std::cout << "Error! Can't get the collection: " << tag << "\n";
+    return -1;
+  }
+
+  std::cout << " Collection: " << tag << " Size: " << tkCollection->size() << "\n";
+  return tkCollection->size();
+  */
+ 
+  edm::Handle<edm::View<reco::Track> > tkCollection;
+ 
+  bool found = iEvent.getByLabel(tag, tkCollection);
+
+  if ( ! found ) {
+    std::cout << "Error! Can't get the collection: " << tag << "\n";
+    return -1;
+  }
+
+  std::cout << " Collection: " << tag << " Size: " << tkCollection->size() << "\n";
+  return tkCollection->size();
+ 
+
+}
+
 
 void NewConversionNtuplizer::
 getSimulatedData(const edm::Event& iEvent, vector<PhotonMCTruth>& mcPhotons,const ConversionCollection* pIn){
