@@ -14,7 +14,7 @@
 // Original Author:  Giuseppe Cerati
 // reorganized by:   Domenico Giordano
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NewConversionNtuplizer.cc,v 1.7 2011/08/17 07:38:50 sguazz Exp $
+// $Id: NewConversionNtuplizer.cc,v 1.8 2011/09/02 13:52:19 sguazz Exp $
 //
 //
 
@@ -914,7 +914,7 @@ getNTracksFromCollection(const edm::Event& iEvent, edm::InputTag tag)
     return -1;
   }
 
-  std::cout << " Collection: " << tag << " Size: " << tkCollection->size() << "\n";
+  if (prints) std::cout << " Collection: " << tag << " Size: " << tkCollection->size() << "\n";
   return tkCollection->size();
  
 
