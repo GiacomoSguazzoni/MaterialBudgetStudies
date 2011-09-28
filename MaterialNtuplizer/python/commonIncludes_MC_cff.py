@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 from FWCore.MessageService.MessageLogger_cfi import *
 
-from Configuration.StandardSequences.MagneticField_cff import *
+#from Configuration.StandardSequences.MagneticField_cff import *
 from Configuration.StandardSequences.Services_cff import *
 from Configuration.StandardSequences.Geometry_cff import *
 from TrackingTools.TransientTrack.TransientTrackBuilder_cfi import *
