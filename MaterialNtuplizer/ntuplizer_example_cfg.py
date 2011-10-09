@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("Demo")
 
-process.load("Tests.MaterialNtuplizer.commonIncludes_HI_cff")
+process.load("Tests.MaterialNtuplizer.commonIncludes_example_cff")
 
 ## Top level replacement
 #from Configuration.GlobalRuns.customise_Collision_38X import customise
