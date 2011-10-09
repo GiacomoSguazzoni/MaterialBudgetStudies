@@ -14,7 +14,7 @@ TCut cut;
 //TCut generalCut =  (nuclCut || nuclLooseCut) && "mOut/ptOut > 0.8";
 TCut runs = "run == 153191";
 TCut nuclCut = "isNucl && (tkDxy[0] > 0.3 || tkDxy[0] < -0.3) && (tkDxy[1] > 0.3 || tkDxy[1] < -0.3) && mOut > 0.7 && evt_NofflineVtx < 6.1";//  && angle < 6";// && (nOutTkStep67Poor + nOutTkStep67Good == 0)";
-TCut nuclLooseCut = "isNuclLoose && (tkDxy[0] > 0.3 || tkDxy[0] < -0.3) && (tkDxy[1] > 0.3 || tkDxy[1] < -0.3) && mOut > 0.7 && evt_NofflineVtx <  6.1;
+TCut nuclLooseCut = "isNuclLoose && (tkDxy[0] > 0.3 || tkDxy[0] < -0.3) && (tkDxy[1] > 0.3 || tkDxy[1] < -0.3) && mOut > 0.7 && evt_NofflineVtx <  6.1";
 TCut generalCut =  (nuclCut);// || nuclLooseCut); // && "mOut/ptOut*sin(thetaOut) > 0.25")
 TCut cutFAKE = "isAssoc==0";
 // TCut generalCut = "";
