@@ -4,7 +4,7 @@
 #include <TStyle.h>
 #include <TCanvas.h>
 
-void ntupleR2S::Loop()
+void TrackingSteps::Loop()
 {
 
 
@@ -16,8 +16,8 @@ void ntupleR2S::Loop()
   
 
 //   In a ROOT session, you can do:
-//      Root > .L ntupleR2S.C
-//      Root > ntupleR2S t
+//      Root > .L TrackingSteps.C
+//      Root > TrackingSteps t
 //      Root > t.GetEntry(12); // Fill t data members with entry number 12
 //      Root > t.Show();       // Show values of entry 12
 //      Root > t.Show(16);     // Read and show values of entry 16

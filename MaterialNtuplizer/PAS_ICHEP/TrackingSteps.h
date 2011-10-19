@@ -1,19 +1,19 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
 // Mon Jun 21 17:25:44 2010 by ROOT version 5.20/00
-// from TTree ntupleR2S/reco2sim
+// from TTree TrackingSteps/reco2sim
 // found on file: ntuple_nuclint_CMSSW358p3_goodcoll7TeV_2010-06-04.root
 //////////////////////////////////////////////////////////
 
-#ifndef ntupleR2S_h
-#define ntupleR2S_h
+#ifndef TrackingSteps_h
+#define TrackingSteps_h
 
 #include <TROOT.h>
 #include <TChain.h>
 #include <TFile.h>
 #include <TH1.h>
 
-class ntupleR2S {
+class TrackingSteps {
 public :
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
    Int_t           fCurrent; //!current Tree number in a TChain
@@ -137,8 +137,8 @@ public :
    TH1 * h12;
    TFile* out;
 
-   ntupleR2S(TTree *tree=0);
-   virtual ~ntupleR2S();
+   TrackingSteps(TTree *tree=0);
+   virtual ~TrackingSteps();
    virtual Int_t    Cut(Long64_t entry);
    virtual Int_t    GetEntry(Long64_t entry);
    virtual Long64_t LoadTree(Long64_t entry);
@@ -150,8 +150,8 @@ public :
 
 #endif
 
-#ifdef ntupleR2S_cxx
-ntupleR2S::ntupleR2S(TTree *tree)
+#ifdef TrackingSteps_cxx
+TrackingSteps::TrackingSteps(TTree *tree)
 {
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
@@ -164,23 +164,23 @@ ntupleR2S::ntupleR2S(TTree *tree)
      //    f = new TFile("ntuple_nuclint_CMSSW358p3_goodcoll7TeV_2010-06-04.root");
      // }
      // }
-  tree = (TTree*)gDirectory->Get("ntupleR2S");
+  tree = (TTree*)gDirectory->Get("TrackingSteps");
    Init(tree);
 }
 
-ntupleR2S::~ntupleR2S()
+TrackingSteps::~TrackingSteps()
 {
    if (!fChain) return;
    delete fChain->GetCurrentFile();
 }
 
-Int_t ntupleR2S::GetEntry(Long64_t entry)
+Int_t TrackingSteps::GetEntry(Long64_t entry)
 {
 // Read contents of entry.
    if (!fChain) return 0;
    return fChain->GetEntry(entry);
 }
-Long64_t ntupleR2S::LoadTree(Long64_t entry)
+Long64_t TrackingSteps::LoadTree(Long64_t entry)
 {
 // Set the environment to read one entry
    if (!fChain) return -5;
@@ -195,7 +195,7 @@ Long64_t ntupleR2S::LoadTree(Long64_t entry)
    return centry;
 }
 
-void ntupleR2S::Init(TTree *tree)
+void TrackingSteps::Init(TTree *tree)
 {
    // The Init() function is called when the selector needs to initialize
    // a new tree or chain. Typically here the branch addresses and branch
@@ -302,7 +302,7 @@ void ntupleR2S::Init(TTree *tree)
 
 }
 
-Bool_t ntupleR2S::Notify()
+Bool_t TrackingSteps::Notify()
 {
    // The Notify() function is called when a new file is opened. This
    // can be either for a new TTree in a TChain or when when a new TTree
@@ -313,18 +313,18 @@ Bool_t ntupleR2S::Notify()
    return kTRUE;
 }
 
-void ntupleR2S::Show(Long64_t entry)
+void TrackingSteps::Show(Long64_t entry)
 {
 // Print contents of entry.
 // If entry is not specified, print current entry
    if (!fChain) return;
    fChain->Show(entry);
 }
-Int_t ntupleR2S::Cut(Long64_t entry)
+Int_t TrackingSteps::Cut(Long64_t entry)
 {
 // This function may be called from Loop.
 // returns  1 if entry is accepted.
 // returns -1 otherwise.
    return 1;
 }
-#endif // #ifdef ntupleR2S_cxx
+#endif // #ifdef TrackingSteps_cxx
