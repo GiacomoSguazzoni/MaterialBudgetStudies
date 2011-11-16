@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.11 2011/08/01 10:28:23 sguazz Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.12 2011/08/03 14:37:13 sguazz Exp $
 //
 //
 
@@ -85,7 +85,7 @@ typedef struct {
   float evt_bsx0, evt_bsy0,evt_bsz0,evt_bssigmaz,evt_bsdxdz,evt_bsdydz, evt_bsBeamWidthX, evt_bsBeamWidthY;
   std::vector<float> tkPt,tkEta,tkDxy,tkDz,tkRho,tkDxy_min,tkDz_min,tkDxyForDzMin,tkDzForDxyMin;
   std::vector<int> tkHits,tkAlgo,tkOuter,minDxyVertexNumber,minDzVertexNumber;
-  std::vector<bool> tkPrimary, tkSecondary;
+  std::vector<int> tkPrimary, tkSecondary;
 
 } RECOTOSIM;
 
@@ -118,6 +118,9 @@ private:
   TTree *ntupleS2R,*ntupleR2S;
   EVT evtbranch;
   TTree *ntupleEvt;
+  
+  edm::InputTag pfDisplacedVertex;
+  edm::InputTag generalTracks;
 };
 
 NuclIntNtuplizer::NuclIntNtuplizer(const edm::ParameterSet& iConfig) :
@@ -125,7 +128,9 @@ NuclIntNtuplizer::NuclIntNtuplizer(const edm::ParameterSet& iConfig) :
   hitassoc(iConfig.getParameter<bool>("hitassoc")),
   simulation(iConfig.getParameter<bool>("simulation")), 
   prints(iConfig.getParameter<bool>("prints")) ,
-  ntupleS2R(0),ntupleR2S(0)
+  ntupleS2R(0),ntupleR2S(0),
+  pfDisplacedVertex(iConfig.getParameter<edm::InputTag>("pfDisplacedVertex")),
+  generalTracks(iConfig.getParameter<edm::InputTag>("generalTracks"))
 { }
 
 
@@ -262,7 +267,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
   //make conversion vertices
   Handle<PFDisplacedVertexCollection> pIn;
-  iEvent.getByLabel("particleFlowDisplacedVertex",pIn);
+  iEvent.getByLabel(pfDisplacedVertex,pIn);
 
   edm::Handle<reco::VertexCollection> vertexHandle;
   iEvent.getByLabel("offlinePrimaryVertices", vertexHandle);
@@ -327,7 +332,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
 
   Handle<TrackCollection> tracksIn;
-  iEvent.getByLabel("generalTracks",tracksIn);
+  iEvent.getByLabel(generalTracks,tracksIn);
 
   Handle<ConversionCollection> pInConv;
   //  iEvent.getByLabel("trackerOnlyConversions",pInConv);
@@ -545,8 +550,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.tkHits = std::vector<int>();
     r2sbranch.tkAlgo = std::vector<int>();
     r2sbranch.tkOuter = std::vector<int>();
-    r2sbranch.tkPrimary = std::vector<bool>();
-    r2sbranch.tkSecondary = std::vector<bool>();
+    r2sbranch.tkPrimary = std::vector<int>();
+    r2sbranch.tkSecondary = std::vector<int>();
     
     r2sbranch.tkDxy_min       = std::vector<float>();
     r2sbranch.tkDzForDxyMin   = std::vector<float>();
