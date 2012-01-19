@@ -14,7 +14,7 @@
 // Original Author:  Giuseppe Cerati
 // reorganized by:   Domenico Giordano
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NewConversionNtuplizer.cc,v 1.8 2011/09/02 13:52:19 sguazz Exp $
+// $Id: NewConversionNtuplizer.cc,v 1.9 2011/09/02 17:44:25 sguazz Exp $
 //
 //
 
@@ -396,7 +396,7 @@ NewConversionNtuplizer::NewConversionNtuplizer(const edm::ParameterSet& iConfig)
   ckfTrackCollectionTag = (iConfig.exists("ckfTrackCollectionTag")) 
     ? iConfig.getParameter<InputTag>("ckfTrackCollectionTag") : edm::InputTag("generalTracks");
   singleLegTrackCollectionTag = (iConfig.exists("singleLegTrackCollectionTag")) 
-    ? iConfig.getParameter<InputTag>("singleLegTrackCollectionTag") : edm::InputTag("convStepTracks");
+    ? iConfig.getParameter<InputTag>("singleLegTrackCollectionTag") : edm::InputTag("conversionStepTracks");
   gsfTrackCollectionTag = (iConfig.exists("gsfTrackCollectionTag")) 
     ? iConfig.getParameter<InputTag>("gsfTrackCollectionTag") : edm::InputTag("electronGsfTracks");
   //? iConfig.getParameter<InputTag>("gsfTrackCollectionTag") : edm::InputTag("gsfConversionTrackProducer");
@@ -500,7 +500,7 @@ getReconstructedData(const edm::Event& iEvent,const ConversionCollection* pIn,ve
     KinematicVertex& vtx = rcv->second;
     if (prints) cout << "got vtx" << endl;
  
-    //sguazz    TrackRef arrayTK[2]={conv.tracks().front() , conv.tracks().back()};     
+    //    TrackRef arrayTK[2]={conv.tracks().front() , conv.tracks().back()};     
     const edm::RefToBase<reco::Track> arrayTK[2]={conv.tracks().front() , conv.tracks().back()};
     
     //reco plots
