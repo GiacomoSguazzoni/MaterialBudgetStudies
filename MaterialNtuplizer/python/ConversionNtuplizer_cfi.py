@@ -19,8 +19,9 @@ conv = cms.EDAnalyzer('ConversionNtuplizer',
 
 newConv = cms.EDAnalyzer('NewConversionNtuplizer',
                          outfile = cms.string('newNtuple_conversion.root'),
-                         generalTkOnly = cms.bool(True),#if do only generalTracks or all merged tracks
                          primaryVerticesTag = cms.InputTag('offlinePrimaryVertices'),
+                         generalTkOnly = cms.bool(True),#if do only generalTracks or all merged tracks
+                         redovtx = cms.bool(False),
                          hitassoc = cms.bool(True),
                          retracking = cms.bool(False),#if re-doing tracking, for dedicated tracking test ONLY
                          minPhoPtForEffic = cms.double(0.3),#when hardcoded it was 2.5
@@ -32,5 +33,6 @@ newConv = cms.EDAnalyzer('NewConversionNtuplizer',
                          maxPhoZForPurity = cms.double(200.),
                          maxPhoRForPurity = cms.double(100.),
                          simulation = cms.bool(True),
+                         dataType = cms.untracked.string('AOD'), # It can be either "AOD or "RECO"
                          prints = cms.bool(False)
                          )

@@ -14,7 +14,7 @@
 // Original Author:  Giuseppe Cerati
 // reorganized by:   Domenico Giordano
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NewConversionNtuplizer.cc,v 1.9 2011/09/02 17:44:25 sguazz Exp $
+// $Id: NewConversionNtuplizer.cc,v 1.10 2012/01/19 13:16:32 sguazz Exp $
 //
 //
 
@@ -343,6 +343,7 @@ private:
   double maxPhoZForPurity;
   double maxPhoRForPurity;
   bool simulation;
+  std::string dataType;
   bool prints;
 
   int numberOfRecoConvInEvt;
@@ -387,7 +388,8 @@ NewConversionNtuplizer::NewConversionNtuplizer(const edm::ParameterSet& iConfig)
   maxPhoZForPurity(iConfig.getParameter<double>("maxPhoZForPurity")),
   maxPhoRForPurity(iConfig.getParameter<double>("maxPhoRForPurity")),
   simulation(iConfig.getParameter<bool>("simulation")), 
-  prints(iConfig.getParameter<bool>("prints")) ,
+  dataType(iConfig.getUntrackedParameter<std::string>("dataType",std::string("AOD"))), // It can be either "AOD" or "RECO"
+  prints(iConfig.getParameter<bool>("prints")),
   ntupleEvt(0),
   ntupleS2R(0),ntupleR2S(0)
 { 
@@ -434,7 +436,6 @@ void NewConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventS
     iSetup.get<TrackAssociatorRecord>().get("TrackAssociatorByHits",theAssociator);
     iEvent.getByLabel("mergedtruth","MergedTrackTruth",TPCollectionH);
   }
-
 
   //----------------------------------
 
@@ -727,24 +728,29 @@ void NewConversionNtuplizer::fillR2S(const Conversion& conv, const edm::RefToBas
       r2sbranch.recoLeg[i].dz = tk[i]->dz();
     }    
 
-    float iphi=-999.;
-    getStateAtVertex(tk[i], vtx.position().perp(),vtx.position().z(),iphi);
-    r2sbranch.stateAtVertexLeg[i].phi =iphi;
-  
-    r2sbranch.inStateLeg[i].x     =tk[i]->innerPosition().x();
-    r2sbranch.inStateLeg[i].y     =tk[i]->innerPosition().y();
-    r2sbranch.inStateLeg[i].z     =tk[i]->innerPosition().z();
-    r2sbranch.inStateLeg[i].px = tk[i]->innerMomentum().x();
-    r2sbranch.inStateLeg[i].py = tk[i]->innerMomentum().y();
-    r2sbranch.inStateLeg[i].pz = tk[i]->innerMomentum().z();
+    if (dataType == "RECO")
+      {
+	float iphi = -999.;
+	getStateAtVertex(tk[i], vtx.position().perp(),vtx.position().z(),iphi);
 
-    r2sbranch.outStateLeg[i].x = tk[i]->outerPosition().x();
-    r2sbranch.outStateLeg[i].y = tk[i]->outerPosition().y();
-    r2sbranch.outStateLeg[i].z = tk[i]->outerPosition().z();
+	r2sbranch.stateAtVertexLeg[i].phi =iphi;
 
-    r2sbranch.extrasLeg[i].beforeHits  = getBeforeHit(tk[i],vtx.position().perp(),vtx.position().z());
-    r2sbranch.extrasLeg[i].missHits    = tk[i]->lost();
-    r2sbranch.extrasLeg[i].lambdaError = tk[i]->lambdaError();
+	r2sbranch.inStateLeg[i].x  =tk[i]->innerPosition().x();
+	r2sbranch.inStateLeg[i].y  =tk[i]->innerPosition().y();
+	r2sbranch.inStateLeg[i].z  =tk[i]->innerPosition().z();
+
+	r2sbranch.inStateLeg[i].px = tk[i]->innerMomentum().x();
+	r2sbranch.inStateLeg[i].py = tk[i]->innerMomentum().y();
+	r2sbranch.inStateLeg[i].pz = tk[i]->innerMomentum().z();
+
+        r2sbranch.outStateLeg[i].x = tk[i]->outerPosition().x();
+	r2sbranch.outStateLeg[i].y = tk[i]->outerPosition().y();
+	r2sbranch.outStateLeg[i].z = tk[i]->outerPosition().z();
+
+	r2sbranch.extrasLeg[i].beforeHits  = getBeforeHit(tk[i],vtx.position().perp(),vtx.position().z());
+	r2sbranch.extrasLeg[i].missHits    = tk[i]->lost();
+	r2sbranch.extrasLeg[i].lambdaError = tk[i]->lambdaError();
+      }
   }
 
   //  math::XYZVector photonMom = tk[0]->momentum()+tk[1]->momentum();
@@ -1641,17 +1647,17 @@ void NewConversionNtuplizer::fillS2R(const Conversion& conv,KinematicVertex& vtx
     s2rbranch.extrasLeg[i].missHits     = tk[i]->lost();
     s2rbranch.extrasLeg[i].beforeHits   = getBeforeHit(tk[i], vtx.position().perp(), vtx.position().z());
 
-    float iphi=-999.;
-    GlobalVector ip = getStateAtVertex(tk[i],vtx.position().perp(),vtx.position().z(),iphi);
-    s2rbranch.stateAtVertexLeg[i].phi      = iphi;
-
-    if (valid_pvtx){
-      s2rbranch.recoLeg[i].d0 = - tk[i]->dxy(the_pvtx.position());
-    } else {
-      s2rbranch.recoLeg[i].d0 = tk[i]->d0();
-    }
+    if (dataType == "RECO")
+      {
+	float iphi = -999.;
+	GlobalVector ip = getStateAtVertex(tk[i],vtx.position().perp(),vtx.position().z(),iphi);
+	s2rbranch.stateAtVertexLeg[i].phi = iphi;
+	
+	if (valid_pvtx) s2rbranch.recoLeg[i].d0 = - tk[i]->dxy(the_pvtx.position());
+	else s2rbranch.recoLeg[i].d0 = tk[i]->d0();
+      }
   }   
-
+  
   s2rbranch.convvtx.isAssoc   =1;
   	    
   s2rbranch.convvtx.deltax    = Pho.vertex().x()-vtx.position().x(); 
