@@ -14,7 +14,7 @@
 // Original Author:  Giuseppe Cerati
 // reorganized by:   Domenico Giordano
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NewConversionNtuplizer.cc,v 1.10 2012/01/19 13:16:32 sguazz Exp $
+// $Id: NewConversionNtuplizer.cc,v 1.11 2012/02/01 08:46:23 dinardo Exp $
 //
 //
 
@@ -71,6 +71,7 @@
 #include "SimDataFormats/Track/interface/SimTrackContainer.h"
 #include "SimDataFormats/Vertex/interface/SimVertex.h"
 #include "SimDataFormats/Vertex/interface/SimVertexContainer.h"
+#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
 #include "SimTracker/Records/interface/TrackAssociatorRecord.h"
 #include "SimTracker/TrackAssociation/interface/TrackAssociatorBase.h"
@@ -108,7 +109,7 @@ typedef struct {
   unsigned int lumi;
 
   //Track counters
-  int nCkf, n1Tk, nGsf, nCkfInOut, nCkfOutIn,nRecoConv;
+  int nCkf, n1Tk, nGsf, nCkfInOut, nCkfOutIn, nRecoConv, nPrimVtx;
 
   void init(){
     run=0;
@@ -120,6 +121,7 @@ typedef struct {
     nCkfInOut=0;
     nCkfOutIn=0;
     nRecoConv=0;
+    nPrimVtx=0;
   }
 } EVT;
 
@@ -348,6 +350,10 @@ private:
 
   int numberOfRecoConvInEvt;
 
+  // ### Pileup information in MC ###
+  std::vector<int>* bunchXingMC;
+  std::vector<int>* nInteractionsMC;
+  
   bool valid_pvtx;
   //------------------------------------------------------------------------
   
@@ -388,7 +394,7 @@ NewConversionNtuplizer::NewConversionNtuplizer(const edm::ParameterSet& iConfig)
   maxPhoZForPurity(iConfig.getParameter<double>("maxPhoZForPurity")),
   maxPhoRForPurity(iConfig.getParameter<double>("maxPhoRForPurity")),
   simulation(iConfig.getParameter<bool>("simulation")), 
-  dataType(iConfig.getUntrackedParameter<std::string>("dataType",std::string("AOD"))), // It can be either "AOD" or "RECO"
+  dataType(iConfig.getUntrackedParameter<std::string>("dataType",std::string("MCRECO"))), // It can be:  "MCAOD, "MCRECO", "DATAAOD", "DATARECO"
   prints(iConfig.getParameter<bool>("prints")),
   ntupleEvt(0),
   ntupleS2R(0),ntupleR2S(0)
@@ -483,8 +489,11 @@ void NewConversionNtuplizer::analyze(const edm::Event& iEvent, const edm::EventS
   if (prints) cout << "loop on reco, size=" << numberOfRecoConvInEvt << endl;
   getReconstructedData(iEvent,pIn.product(),mcPhotons);
 
-  setEvent(iEvent);
 
+  // ###################
+  // # Fill Evt Branch #
+  // ###################
+  setEvent(iEvent);
 }
  
 void NewConversionNtuplizer::
@@ -551,7 +560,11 @@ NewConversionNtuplizer::beginJob()
   ntupleEvt->Branch("nCkfInOut",        &(evtbranch.nCkfInOut), "nCkfInOut/I");
   ntupleEvt->Branch("nCkfOutIn",        &(evtbranch.nCkfOutIn), "nCkfOutIn/I"); 
   ntupleEvt->Branch("nRecoConv",        &(evtbranch.nRecoConv), "nRecoConv/I"); 
-  
+
+  ntupleEvt->Branch("nPrimVtx",        &(evtbranch.nPrimVtx), "nPrimVtx/I"); 
+  ntupleEvt->Branch("bunchXingMC",     &bunchXingMC); 
+  ntupleEvt->Branch("nInteractionsMC", &nInteractionsMC); 
+
   ntupleS2R = new TTree("ntupleS2R","sim2reco");
   ntupleS2R->Branch("run",		&(evtbranch.run),"run/I");
   ntupleS2R->Branch("event",		&(evtbranch.event),"event/I");
@@ -728,7 +741,7 @@ void NewConversionNtuplizer::fillR2S(const Conversion& conv, const edm::RefToBas
       r2sbranch.recoLeg[i].dz = tk[i]->dz();
     }    
 
-    if (dataType == "RECO")
+    if ((dataType == "MCRECO") || (dataType == "DATARECO"))
       {
 	float iphi = -999.;
 	getStateAtVertex(tk[i], vtx.position().perp(),vtx.position().z(),iphi);
@@ -863,6 +876,21 @@ setEvent(const edm::Event& iEvent){
   evtbranch.run=iEvent.run();
   evtbranch.event=iEvent.id().event();
   evtbranch.lumi  = iEvent.id().luminosityBlock();
+
+  edm::Handle<reco::VertexCollection> vertexHandle;
+  iEvent.getByLabel(primaryVerticesTag, vertexHandle);
+  evtbranch.nPrimVtx = vertexHandle->size();
+
+  if ((dataType == "MCRECO") || (dataType == "MCAOD"))
+    {
+      edm::Handle< vector<PileupSummaryInfo> > PupInfo;
+      iEvent.getByLabel(edm::InputTag("addPileupInfo"), PupInfo);
+      for (vector<PileupSummaryInfo>::const_iterator PVI = PupInfo->begin(); PVI != PupInfo->end(); PVI++)
+	{
+	  bunchXingMC->push_back(PVI->getBunchCrossing());
+	  nInteractionsMC->push_back(PVI->getPU_NumInteractions());
+	}
+    }
 
   //Count tracks from collections;
   evtbranch.nCkf = getNTracksFromCollection(iEvent, ckfTrackCollectionTag);
@@ -1647,7 +1675,7 @@ void NewConversionNtuplizer::fillS2R(const Conversion& conv,KinematicVertex& vtx
     s2rbranch.extrasLeg[i].missHits     = tk[i]->lost();
     s2rbranch.extrasLeg[i].beforeHits   = getBeforeHit(tk[i], vtx.position().perp(), vtx.position().z());
 
-    if (dataType == "RECO")
+    if ((dataType == "MCRECO") || (dataType == "DATARECO"))
       {
 	float iphi = -999.;
 	GlobalVector ip = getStateAtVertex(tk[i],vtx.position().perp(),vtx.position().z(),iphi);
