@@ -1,11 +1,8 @@
 import FWCore.ParameterSet.Config as cms
-
-########
-
 process = cms.Process("ConvAndNuclInt")
 
 
-# Message logger and Debug
+### Message logger and Debug ###
 process.load("FWCore.MessageService.MessageLogger_cfi")
 #Debug = True 
 Debug = False
@@ -14,21 +11,15 @@ if Debug:
       process.MessageLogger.categories+=cms.vstring("BeamConditions",
                                                     "PhotonConversionTrajectorySeedProducerFromSingleLegAlgo",
                                                     "PhotonConversionTrajectorySeedProducerFromSingleLeg",
-                                                    "debugTrajSeedFromSingleLeg"
-                                                    )
+                                                    "debugTrajSeedFromSingleLeg")
       process.MessageLogger.cerr.FwkReport.reportEvery = 1
 else:
       process.MessageLogger.cerr.FwkReport.reportEvery = 100
-      
-      
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
-      
-process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(100)
-)
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 
 
-# Load standard sequences
+### Load standard sequences ###
 process.load("Configuration.StandardSequences.Reconstruction_cff")
 process.load("Configuration.StandardSequences.MagneticField_AutoFromDBCurrent_cff")
 process.load("Configuration.StandardSequences.GeometryDB_cff")
@@ -39,11 +30,12 @@ process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 #process.load("RecoVertex.BeamSpotProducer.BeamSpot_cff"                           )
 process.load("RecoTracker.TrackProducer.TrackRefitters_cff")
 
-# Global tag
+
+### Global tag ###
 process.GlobalTag.globaltag = "GR_R_44_V12::All"
 
 
-# HLT trigger selection
+### HLT trigger selection ###
 process.load("HLTrigger.HLTfilters.hltHighLevel_cfi")
 process.hltfilter = process.hltHighLevel.clone(
 #      HLTPaths = ["*"],
@@ -57,8 +49,6 @@ process.hltfilter = process.hltHighLevel.clone(
 ##from Configuration.GlobalRuns.reco_TLR_42X import customisePPData
 ##customisePPData(process)
 #------------------------------------------------------
-
-
 
 #------------------------------------------------------
 # MONITORING PART
@@ -83,25 +73,22 @@ process.hltfilter = process.hltHighLevel.clone(
 #      )
 
 
-# Photon Conversions Ntuplizer
+### Photon Conversions Ntuplizer ###
 process.load('Tests.MaterialNtuplizer.ConversionNtuplizer_cfi')
 process.convNtupl = cms.Path(process.hltfilter*process.newConv)
 
 
-# Nuclear Interactions Ntuplizer
+### Nuclear Interactions Ntuplizer ###
 from RecoParticleFlow.PFTracking.particleFlowDisplacedVertexCandidate_cff import *
 from RecoParticleFlow.PFTracking.particleFlowDisplacedVertex_cff import *
 particleFlowDisplacedVertex.primaryVertexCut = cms.double(2.0)
 particleFlowDisplacedVertexCandidate.primaryVertexCut = cms.double(1.8)
-disp = cms.Sequence(
-    particleFlowDisplacedVertexCandidate +
-    particleFlowDisplacedVertex
-)
+disp = cms.Sequence(particleFlowDisplacedVertexCandidate + particleFlowDisplacedVertex)
 process.load('Tests.MaterialNtuplizer.NuclIntNtuplizer_cfi')
 process.nuclNtupl = cms.Path(process.hltfilter*disp*process.nucl)
 
 
-# I/O
+### I/O ###
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
 source = cms.Source ("PoolSource",fileNames = readFiles, secondaryFileNames = secFiles)
@@ -110,8 +97,8 @@ readFiles.extend( [
 #      'file:/nfs/data36/cms/dinardo/MaterialStudies/myAOD_E033A79D-4D21-E111-B453-002618943970.root',
 #      'file:/nfs/data36/cms/dinardo/MaterialStudies/aod_182C7A8D-C411-E111-AB23-0026189438DD.root'
       'file:/nfs/data36/cms/dinardo/MaterialStudies/reco_9288DF20-CEFC-E011-8962-003048678B8E.root'
-] );
+#      'file:/nfs/data36/cms/dinardo/MaterialStudies/Neutrino_Pt_2to20_gun_GEN-SIM-RECO_PU_S6-START44_V5-v1_0024B788-9A05-E111-9681-002481E1501E.root'
+      ] );
 ## secFiles.extend( [
 ##                ] )
 process.source = source
-#----------------------------------

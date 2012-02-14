@@ -33,6 +33,6 @@ newConv = cms.EDAnalyzer('NewConversionNtuplizer',
                          maxPhoZForPurity = cms.double(200.),
                          maxPhoRForPurity = cms.double(100.),
                          simulation = cms.bool(True),
-                         dataType = cms.untracked.string('AOD'), # It can be either "AOD or "RECO"
+                         dataType = cms.untracked.string('MCRECO'), # It can be:  "MCAOD, "MCRECO", "DATAAOD", "DATARECO"
                          prints = cms.bool(False)
                          )

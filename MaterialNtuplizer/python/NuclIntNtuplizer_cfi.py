@@ -6,5 +6,6 @@ nucl = cms.EDAnalyzer('NuclIntNtuplizer',
                       simulation = cms.bool(True),
                       prints = cms.bool(False),
                       pfDisplacedVertex = cms.InputTag("particleFlowDisplacedVertex"),
-                      generalTracks = cms.InputTag("generalTracks")
+                      generalTracks = cms.InputTag("generalTracks"),
+                      dataType = cms.untracked.string('MCRECO') # It can be:  "MCAOD, "MCRECO", "DATAAOD", "DATARECO"
 )

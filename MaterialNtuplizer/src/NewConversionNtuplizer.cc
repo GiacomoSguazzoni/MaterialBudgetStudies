@@ -14,7 +14,7 @@
 // Original Author:  Giuseppe Cerati
 // reorganized by:   Domenico Giordano
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NewConversionNtuplizer.cc,v 1.11 2012/02/01 08:46:23 dinardo Exp $
+// $Id: NewConversionNtuplizer.cc,v 1.12 2012/02/14 10:43:00 dinardo Exp $
 //
 //
 
@@ -547,6 +547,9 @@ NewConversionNtuplizer::beginJob()
 {
   file = new TFile(outfile.c_str(),"recreate");
 
+  bunchXingMC = new std::vector<int>;
+  nInteractionsMC = new std::vector<int>;
+
   const bool oldAddDir = TH1::AddDirectoryStatus();
   TH1::AddDirectory(true);
 
@@ -881,6 +884,8 @@ setEvent(const edm::Event& iEvent){
   iEvent.getByLabel(primaryVerticesTag, vertexHandle);
   evtbranch.nPrimVtx = vertexHandle->size();
 
+  bunchXingMC->clear();
+  nInteractionsMC->clear();
   if ((dataType == "MCRECO") || (dataType == "MCAOD"))
     {
       edm::Handle< vector<PileupSummaryInfo> > PupInfo;

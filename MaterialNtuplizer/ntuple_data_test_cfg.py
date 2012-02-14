@@ -9,10 +9,12 @@ process.newConv.simulation = cms.bool(False)
 process.newConv.prints = cms.bool(False)
 process.newConv.redovtx = cms.bool(False)
 process.newConv.hitassoc = cms.bool(False)
+process.newConv.dataType = cms.untracked.string('DATARECO') # It can be:  "MCAOD, "MCRECO", "DATAAOD", "DATARECO"
 process.newConv.outfile = cms.string('ntuple_conversion.root')
 process.nucl.outfile = cms.string('ntuple_nuclint.root')
 process.nucl.simulation = cms.bool(False)
 process.nucl.prints = cms.bool(False)
+process.nucl.dataType = cms.untracked.string('DATARECO') # It can be:  "MCAOD, "MCRECO", "DATAAOD", "DATARECO"
 process.load("SimTracker.TrackAssociation.TrackAssociatorByHits_cfi")
 process.TrackAssociatorByHits.SimToRecoDenominator = 'reco'
 process.TrackAssociatorByHits.Quality_SimToReco = 0.5

@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.12 2011/08/03 14:37:13 sguazz Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.13 2011/11/16 16:34:42 ygouzevi Exp $
 //
 //
 
@@ -38,6 +38,7 @@ Implementation:
 
 #include "SimTracker/Records/interface/TrackAssociatorRecord.h"
 #include "SimDataFormats/TrackingAnalysis/interface/TrackingVertexContainer.h"
+#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
 #include "SimTracker/Records/interface/TrackAssociatorRecord.h"
 #include "SimTracker/TrackAssociation/interface/TrackAssociatorBase.h"
@@ -90,7 +91,7 @@ typedef struct {
 } RECOTOSIM;
 
 typedef struct {
-  int run, event;
+  int run, event, nPrimVtx;
   unsigned int lumi;
 } EVT;
 
@@ -119,8 +120,14 @@ private:
   EVT evtbranch;
   TTree *ntupleEvt;
   
+  // ### Pileup information in MC ###
+  std::vector<int>* bunchXingMC;
+  std::vector<int>* nInteractionsMC;
+
   edm::InputTag pfDisplacedVertex;
   edm::InputTag generalTracks;
+
+  std::string dataType;
 };
 
 NuclIntNtuplizer::NuclIntNtuplizer(const edm::ParameterSet& iConfig) :
@@ -130,7 +137,8 @@ NuclIntNtuplizer::NuclIntNtuplizer(const edm::ParameterSet& iConfig) :
   prints(iConfig.getParameter<bool>("prints")) ,
   ntupleS2R(0),ntupleR2S(0),
   pfDisplacedVertex(iConfig.getParameter<edm::InputTag>("pfDisplacedVertex")),
-  generalTracks(iConfig.getParameter<edm::InputTag>("generalTracks"))
+  generalTracks(iConfig.getParameter<edm::InputTag>("generalTracks")),
+  dataType(iConfig.getUntrackedParameter<std::string>("dataType",std::string("MCRECO"))) // It can be:  "MCAOD, "MCRECO", "DATAAOD", "DATARECO"
 { }
 
 
@@ -148,6 +156,30 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   evtbranch.run = runNer;
   evtbranch.event = eventNumber;
   evtbranch.lumi = lumi_block;
+
+  edm::Handle<reco::VertexCollection> vertexHandle;
+  iEvent.getByLabel("offlinePrimaryVertices", vertexHandle);
+  reco::Vertex the_pvtx;
+  bool valid_pvtx = false;
+  if (!vertexHandle->empty()){
+    the_pvtx = *(vertexHandle->begin());
+    valid_pvtx = true;
+  }
+  evtbranch.nPrimVtx = vertexHandle->size();
+
+  bunchXingMC->clear();
+  nInteractionsMC->clear();
+  if ((dataType == "MCRECO") || (dataType == "MCAOD"))
+    {
+      edm::Handle< vector<PileupSummaryInfo> > PupInfo;
+      iEvent.getByLabel(edm::InputTag("addPileupInfo"), PupInfo);
+      for (vector<PileupSummaryInfo>::const_iterator PVI = PupInfo->begin(); PVI != PupInfo->end(); PVI++)
+	{
+          bunchXingMC->push_back(PVI->getBunchCrossing());
+          nInteractionsMC->push_back(PVI->getPU_NumInteractions());
+	}
+    }
+
   ntupleEvt->Fill();
 
   s2rbranch.run=iEvent.run();
@@ -269,17 +301,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   Handle<PFDisplacedVertexCollection> pIn;
   iEvent.getByLabel(pfDisplacedVertex,pIn);
 
-  edm::Handle<reco::VertexCollection> vertexHandle;
-  iEvent.getByLabel("offlinePrimaryVertices", vertexHandle);
-  reco::Vertex the_pvtx;
-  bool valid_pvtx = false;
-  if (!vertexHandle->empty()){
-    the_pvtx = *(vertexHandle->begin());
-    valid_pvtx = true;
-  }
-
   // add nHits information
-
   Handle<std::map<unsigned int, int> > ndigi;
   bool bHits = iEvent.getByLabel("pixClus", ndigi);
   double nHits = 0;
@@ -747,6 +769,9 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 void NuclIntNtuplizer::beginJob() {
   file = new TFile(outfile.c_str(),"recreate");
   
+  bunchXingMC = new std::vector<int>;
+  nInteractionsMC = new std::vector<int>;
+
   const bool oldAddDir = TH1::AddDirectoryStatus();
   TH1::AddDirectory(true);
 
@@ -754,6 +779,11 @@ void NuclIntNtuplizer::beginJob() {
   ntupleEvt->Branch("run", &(evtbranch.run),"run/I");
   ntupleEvt->Branch("event", &(evtbranch.event),"event/I");
   ntupleEvt->Branch("lumi", &(evtbranch.lumi),"lumi/I");
+
+  ntupleEvt->Branch("nPrimVtx",        &(evtbranch.nPrimVtx), "nPrimVtx/I");
+  ntupleEvt->Branch("bunchXingMC",     &bunchXingMC);
+  ntupleEvt->Branch("nInteractionsMC", &nInteractionsMC);
+
 
   ntupleS2R = new TTree("ntupleS2R","sim2reco");
   ntupleS2R->Branch("run",&(s2rbranch.run),"run/I");
