@@ -13,12 +13,12 @@ TCut cut;
 ///TCut nuclLooseCut = "isNuclLoose && (tkDxy[0] > 0.15 || tkDxy[0] < -0.15) && (tkDxy[1] > 0.15 || tkDxy[1] < -0.15) && (tkDxy[2] > 0.15 || tkDxy[2] < -0.15)"; // && nOut - nOutTkStep67Poor - nOutTkStep67Good == 2 && mOut > 0.6 && ptOut > 0.5 && angle < 15";
 //TCut generalCut =  (nuclCut || nuclLooseCut) && "mOut/ptOut > 0.8";
 TCut runs = "run == 153191";
-TCut nuclCut = "isNucl && (tkDxy[0] > 0.3 || tkDxy[0] < -0.3) && (tkDxy[1] > 0.3 || tkDxy[1] < -0.3) && mOut > 0.7 && evt_NofflineVtx < 6.1";//  && angle < 6";// && (nOutTkStep67Poor + nOutTkStep67Good == 0)";
+TCut nuclCut = "isNucl && (tkDxy[0] > 0.3 || tkDxy[0] < -0.3) && (tkDxy[1] > 0.3 || tkDxy[1] < -0.3) && (tkDxy[2] > 0.3 || tkDxy[2] < -0.3) && mOut > 0.7";//  && angle < 6";// && (nOutTkStep67Poor + nOutTkStep67Good == 0)";
 TCut nuclLooseCut = "isNuclLoose && (tkDxy[0] > 0.3 || tkDxy[0] < -0.3) && (tkDxy[1] > 0.3 || tkDxy[1] < -0.3) && mOut > 0.7 && evt_NofflineVtx <  6.1";
 TCut generalCut =  (nuclCut);// || nuclLooseCut); // && "mOut/ptOut*sin(thetaOut) > 0.25")
 TCut cutFAKE = "isAssoc==0";
 // TCut generalCut = "";
-TCut BarrelCut = "TMath::Abs(z) < 1000";
+TCut BarrelCut = "TMath::Abs(z) < 20";
 TCut TIBCut = "TMath::Abs(z) < 20 && rho > 17";
 TCut FPIXCut = "rho < 19";
 
@@ -47,7 +47,7 @@ void ProduceNuclearHistos_example(){
   
 //  string s1 = "/castor/cern.ch/user/m/mgouzevi/cmst3/CMSSW_BEAMPIPE/4T/20110531_ntuple_nuclint.root"; bDATA = false;
 
-  string s1 = "ntuple_NI.root";
+  string s1 = "ntuple_nuclint.root";
 
   f1  = TFile::Open(s1.data());
 
@@ -150,9 +150,58 @@ DATA BEAM PIPE CORRECTED
 // ================ BEGINING OF REC STUDY ================ //
 
 
+//--------------------------------------//
+//------------- Canvas 1.2 --------------//
+//------------- Rho Barrel Nucl ----------------//
+//--------------------------------------//
+
+ nbins = 50; 
+ min = 0., max = min + nbins*1.0;
+ plotName  = "RHO_BARREL";
+ histo_title = "#rho Nucl";
+ xaxis_title = "#rho Nucl (cm)";
+ variable = "rho";
+ cut0 = BarrelCut;
+ cut = cut0&&generalCut;
+ 
+ PlottiPlotta();
+
+
+//--------------------------------------//
+//------------- Canvas 1.2 --------------//
+//------------- Rho Barrel Nucl ----------------//
+//--------------------------------------//
+
+ nbins = 50; 
+ min = 0, max = min + nbins*0.2;
+ plotName  = "M_Out";
+ histo_title = "M_Out";
+ xaxis_title = "M_Out";
+ variable = "mOut";
+ cut0 = "";
+ cut = cut0&&generalCut;
+ 
+ PlottiPlotta();
+
+//--------------------------------------//
+//------------- Canvas 1.2 --------------//
+//------------- Rho Barrel Nucl ----------------//
+//--------------------------------------//
+
+ nbins = 100; 
+ min = 0, max = min + nbins*0.2;
+ plotName  = "Pt_Out";
+ histo_title = "Pt_Out";
+ xaxis_title = "ptOut";
+ variable = "ptOut";
+ cut0 = "";
+ cut = cut0&&generalCut;
+ 
+ PlottiPlotta();
 
 
 
+ 
 //--------------------------------------//
 //------------- Canvas 1.2 --------------//
 //------------- Rho Barrel Nucl ----------------//
@@ -205,7 +254,7 @@ DATA BEAM PIPE CORRECTED
  cut = cut0&&generalCut;
  
  PlottiPlotta3D();
-
+ 
 
 
 
