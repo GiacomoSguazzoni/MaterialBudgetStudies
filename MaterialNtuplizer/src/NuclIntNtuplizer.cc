@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.13 2011/11/16 16:34:42 ygouzevi Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.14 2012/02/14 10:52:58 dinardo Exp $
 //
 //
 
@@ -35,6 +35,7 @@ Implementation:
 #include "DataFormats/ParticleFlowReco/interface/PFDisplacedVertexFwd.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
+#include "DataFormats/Math/interface/deltaPhi.h"
 
 #include "SimTracker/Records/interface/TrackAssociatorRecord.h"
 #include "SimDataFormats/TrackingAnalysis/interface/TrackingVertexContainer.h"
@@ -108,6 +109,7 @@ private:
   bool isKDecay(const TrackingVertex&) const;  
   bool isConversion(const TrackingVertex&) const;  
   float getKMass(const reco::PFDisplacedVertex&) const;
+  bool isSimVertexOutsideAssCut(const TrackingVertex&, const reco::PFDisplacedVertex&) const;
 
   TFile * file;
   std::string outfile;
@@ -445,6 +447,11 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       double deltaX = 999;
       double deltaY = 999;
 
+      double oldDistance3D = 10000.; //Start with a big value
+      bool assoc = false;
+      int iDCOfLastAssociated = -1;
+      int iDC = -1;
+
       for (PFDisplacedVertexCollection::const_iterator rni=pIn->begin();rni!=pIn->end();++rni) {
 	if (prints) cout << "got vtx" << endl;
 
@@ -460,40 +467,77 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	deltaY = iVtx->position().y()-rni->position().y();
 	deltaZ = iVtx->position().z()-rni->position().z();
 	deltaR  = sqrt(iVtx->position().perp2())-sqrt(rni->position().perp2());
+	double distance3D = sqrt(deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ);
 
-	bool assoc = false;
+	iDC++;
+
+// 	bool assoc = false;
 	if (hitassoc) {
 	} else {
-	  if (fabs(deltaX)>2. || fabs(deltaY)>2. || fabs(deltaZ)>2.) continue;
+	  // #########################################################
+	  // # In this way we choose the nearest vertex to the truth #
+	  // #########################################################
+	  if ((isSimVertexOutsideAssCut(*iVtx, *rni) == true) && (distance3D > oldDistance3D)) continue;
+	  oldDistance3D = distance3D;
 	  assoc = true;
+	  iDCOfLastAssociated = iDC;
+
+// 	  if (fabs(deltaX)>2. || fabs(deltaY)>2. || fabs(deltaZ)>2.) continue;
+// 	  assoc = true;
 	}
-	if (prints) cout << "associated" << endl;
-
- 	s2rbranch.isAssoc = 1;
-	s2rbranch.deltapt = deltaPt;
-	s2rbranch.deltaphi = deltaPhi;
-	s2rbranch.deltatheta = deltaTheta;
-	s2rbranch.deltax = deltaX;
-	s2rbranch.deltay = deltaY;
-	s2rbranch.deltaz = deltaZ;
-	s2rbranch.isNucl = rni->isNucl();
-	s2rbranch.isNuclLoose = rni->isNucl_Loose();
-	s2rbranch.isNuclKink = rni->isNucl_Kink();
-
-	s2rbranch.isK0 = rni->isK0();
-	s2rbranch.isLambda = rni->isLambda();
-	s2rbranch.isLambdaBar = rni->isLambdaBar();
-	s2rbranch.isKplusLoose = rni->isKplus_Loose();
-	s2rbranch.isKminusLoose = rni->isKminus_Loose();
-	s2rbranch.isConvLoose = rni->isConv_Loose();
-	s2rbranch.isLooper = rni->isLooper();
-	s2rbranch.isFake = rni->isFake();
-
-	s2rbranch.isTherePrimaryTrack = rni->isTherePrimaryTracks();
-	s2rbranch.isThereMergedTrack = rni->isThereMergedTracks();
-
-	break;
       }
+
+      if (assoc == true)
+	{
+	  if (prints) cout << "associated" << endl;
+	  
+	  s2rbranch.isAssoc = 1;
+	  s2rbranch.deltapt = deltaPt;
+	  s2rbranch.deltaphi = deltaPhi;
+	  s2rbranch.deltatheta = deltaTheta;
+	  s2rbranch.deltax = deltaX;
+	  s2rbranch.deltay = deltaY;
+	  s2rbranch.deltaz = deltaZ;
+
+	  s2rbranch.isNucl = (pIn->begin()+iDCOfLastAssociated)->isNucl();
+	  s2rbranch.isNuclLoose = (pIn->begin()+iDCOfLastAssociated)->isNucl_Loose();
+	  s2rbranch.isNuclKink = (pIn->begin()+iDCOfLastAssociated)->isNucl_Kink();
+	  
+	  s2rbranch.isK0 = (pIn->begin()+iDCOfLastAssociated)->isK0();
+	  s2rbranch.isLambda = (pIn->begin()+iDCOfLastAssociated)->isLambda();
+	  s2rbranch.isLambdaBar = (pIn->begin()+iDCOfLastAssociated)->isLambdaBar();
+	  s2rbranch.isKplusLoose = (pIn->begin()+iDCOfLastAssociated)->isKplus_Loose();
+	  s2rbranch.isKminusLoose = (pIn->begin()+iDCOfLastAssociated)->isKminus_Loose();
+	  s2rbranch.isConvLoose = (pIn->begin()+iDCOfLastAssociated)->isConv_Loose();
+	  s2rbranch.isLooper = (pIn->begin()+iDCOfLastAssociated)->isLooper();
+	  s2rbranch.isFake = (pIn->begin()+iDCOfLastAssociated)->isFake();
+	  
+	  s2rbranch.isTherePrimaryTrack = (pIn->begin()+iDCOfLastAssociated)->isTherePrimaryTracks();
+	  s2rbranch.isThereMergedTrack = (pIn->begin()+iDCOfLastAssociated)->isThereMergedTracks();
+
+// 	  s2rbranch.isNucl = rni->isNucl();
+// 	  s2rbranch.isNuclLoose = rni->isNucl_Loose();
+// 	  s2rbranch.isNuclKink = rni->isNucl_Kink();
+	  
+// 	  s2rbranch.isK0 = rni->isK0();
+// 	  s2rbranch.isLambda = rni->isLambda();
+// 	  s2rbranch.isLambdaBar = rni->isLambdaBar();
+// 	  s2rbranch.isKplusLoose = rni->isKplus_Loose();
+// 	  s2rbranch.isKminusLoose = rni->isKminus_Loose();
+// 	  s2rbranch.isConvLoose = rni->isConv_Loose();
+// 	  s2rbranch.isLooper = rni->isLooper();
+// 	  s2rbranch.isFake = rni->isFake();
+	  
+// 	  s2rbranch.isTherePrimaryTrack = rni->isTherePrimaryTracks();
+// 	  s2rbranch.isThereMergedTrack = rni->isThereMergedTracks();
+	}
+      else
+	{
+	  if (prints) cout << "Not associated" << endl;
+	  
+	  s2rbranch.isAssoc = 0;
+	}
+
       ntupleS2R->Fill();     
     }
   }
@@ -668,6 +712,8 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     r2sbranch.deltay = 0;
     r2sbranch.deltaz = 0;
 
+    double oldDistance3D = 10000.; //Start with a big value
+
     double deltaR  = 999;
     double deltaZ  = 999;
     double deltaPt = 999;
@@ -707,6 +753,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	deltaY = iVtx->position().y()-rni->position().y();
 	deltaZ = iVtx->position().z()-rni->position().z();
 	deltaR  = sqrt(iVtx->position().perp2())-sqrt(rni->position().perp2());
+	double distance3D = sqrt(deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ);
 
  	deltaPt = sqrt(momIncSim.Perp2())-sqrt(momIncRec.Perp2());
  	deltaPhi = momIncSim.Phi()-momIncRec.Phi();
@@ -718,16 +765,23 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
 	if (hitassoc) {
 	} else {
-	  if (fabs(deltaX)<2. && fabs(deltaY)<2. && fabs(deltaZ)<2.) {
-	    associated = true;
-	    break;
-	  }
+	  // #########################################################
+	  // # In this way we choose the nearest vertex to the truth #
+	  // #########################################################
+	  if ((isSimVertexOutsideAssCut(*iVtx, *rni) == true) && (distance3D > oldDistance3D)) continue;
+	  oldDistance3D = distance3D;
+	  associated = true;
+
+// 	  if (fabs(deltaX)<2. && fabs(deltaY)<2. && fabs(deltaZ)<2.) {
+// 	    associated = true;
+// 	    break;
+// 	  }
 	}
       }
 
       if (associated) {
 	if (prints) cout << "associated" << endl;
-	r2sbranch.isAssoc =1;
+	r2sbranch.isAssoc = 1;
 	r2sbranch.isNuclSim = isNuclSim;
 	r2sbranch.isKSim = isKSim;
 	r2sbranch.isConvSim = isConvSim;
@@ -740,8 +794,12 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	r2sbranch.deltapt_InSim_OutRec = deltaPt_InSim_OutRec;
 	r2sbranch.deltaphi_InSim_OutRec = deltaPhi_InSim_OutRec;
 	r2sbranch.deltatheta_InSim_OutRec = deltaTheta_InSim_OutRec;
-
       }
+      else
+	{
+	if (prints) cout << "Not associated" << endl;
+	r2sbranch.isAssoc = 0;
+	}
     }
 
     
@@ -1020,9 +1078,6 @@ bool NuclIntNtuplizer::isKDecay(const TrackingVertex& v ) const {
 }
 
 
-
-
-
 float NuclIntNtuplizer::getKMass(const reco::PFDisplacedVertex& v) const {
 
   using namespace reco;
@@ -1053,16 +1108,44 @@ float NuclIntNtuplizer::getKMass(const reco::PFDisplacedVertex& v) const {
 }
 
 
+bool NuclIntNtuplizer::isSimVertexOutsideAssCut(const TrackingVertex& vtx, const reco::PFDisplacedVertex& iNI) const
+{
+  bool myPrints = false;
+
+  //Cut on Delta r
+  double r = vtx.position().perp2();
+  double rSim = iNI.position().perp2();
+  double dr = sqrt(r - rSim);
+
+  if (myPrints) std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> New acc test" << std::endl;
+  if (myPrints) std::cout << " dr=" << dr << " eta=" << vtx.position().eta() << std::endl;
+  if ( (fabs(vtx.position().eta())<1.2 && (dr<-1.0 || dr>3.0)) || (fabs(vtx.position().eta())>1.2 && (dr<-2.0 || dr>6.0)) ) return true; 
+
+  //Cut on Delta theta
+  double t = vtx.position().theta();
+  double tSim = iNI.position().theta();
+  double fabsDt = fabs(t - tSim);
+
+  if (myPrints) std::cout << " |dTheta|=" << fabsDt << " eta=" << vtx.position().eta() << std::endl;
+  if ( (fabs(vtx.position().eta())<1.4 && fabsDt>0.2) || (fabs(vtx.position().eta())>1.4 && fabsDt>0.1) ) return true; 
+
+  //Cut on Delta phi
+  double p = vtx.position().phi();
+  double pSim = iNI.position().phi();
+  double fabsDp = fabs(reco::deltaPhi(p, pSim));
+
+  if (myPrints) std::cout << " |dPhi|=" << fabsDp << " eta=" << vtx.position().eta() << std::endl;
+  if ( (fabs(vtx.position().eta())<1.2 && fabsDp>0.04) || (fabs(vtx.position().eta())>1.2 && fabsDp>0.08) ) return true; 
+  if (myPrints) std::cout<< " Within acc cuts..." << std::endl;
+  return false;
+}
+
 
 //define this as a plug-in
 DEFINE_FWK_MODULE(NuclIntNtuplizer);
 
 
-
-
 /*
-
-
 Handle<SimToRecoCollection> hSimToReco;
 Handle<RecoToSimCollection> hRecoToSim;
 
@@ -1072,7 +1155,6 @@ iEvent.getByLabel(recoToSimLabel_, hRecoToSim);
 SimToRecoCollection simToReco = *(hSimToReco.product());
 RecoToSimCollection recoToSim = *(hRecoToSim.product());
 
-
   
 VertexCollection* ptrVertex = new VertexCollection();
 const PFDisplacedVertexCollection displacedVertexColl = *(displacedVertices.product());
@@ -1081,13 +1163,9 @@ for (PFDisplacedVertexCollection::size_type i=0; i<displacedVertexColl.size(); i
 
 ptrVertex->push_back((Vertex) displacedVertexColl[i]);
     
-
 }
 
 Handle<VertexCollection> vertices(ptrVertex, displacedVertices.provenance());
-
-
-
 
 VertexRecoToSimCollection r2s = 
 theVertexAssociator->associateRecoToSim(vertices, VPCollection,
@@ -1096,5 +1174,4 @@ iEvent, recoToSim);
 VertexSimToRecoCollection s2r = 
 theVertexAssociator->associateSimToReco(vertices, VPCollection,
 iEvent, simToReco);
-
 */
