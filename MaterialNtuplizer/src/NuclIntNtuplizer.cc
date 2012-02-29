@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.14 2012/02/14 10:52:58 dinardo Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.15 2012/02/28 19:07:32 dinardo Exp $
 //
 //
 
@@ -1115,7 +1115,7 @@ bool NuclIntNtuplizer::isSimVertexOutsideAssCut(const TrackingVertex& vtx, const
   //Cut on Delta r
   double r = vtx.position().perp2();
   double rSim = iNI.position().perp2();
-  double dr = sqrt(r - rSim);
+  double dr = sqrt(r) - sqrt(rSim);
 
   if (myPrints) std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> New acc test" << std::endl;
   if (myPrints) std::cout << " dr=" << dr << " eta=" << vtx.position().eta() << std::endl;
