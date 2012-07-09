@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Giuseppe Cerati
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NuclIntNtuplizer.cc,v 1.15 2012/02/28 19:07:32 dinardo Exp $
+// $Id: NuclIntNtuplizer.cc,v 1.16 2012/02/29 16:32:25 dinardo Exp $
 //
 //
 
@@ -458,7 +458,7 @@ void NuclIntNtuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	if (rni->isFake()) continue;
 
 	const math::XYZTLorentzVector momIncRec = rni->primaryMomentum("PI", false, 0.0);
-	const math::XYZTLorentzVector momOutRec = rni->secondaryMomentum("PI", true, 0.0);
+	//	const math::XYZTLorentzVector momOutRec = rni->secondaryMomentum("PI", true, 0.0);
 
  	deltaPt = sqrt(momIncSim.Perp2())-sqrt(momIncRec.Perp2());
  	deltaPhi = momIncSim.Phi()-momIncRec.Phi();

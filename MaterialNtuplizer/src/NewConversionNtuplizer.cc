@@ -14,7 +14,7 @@
 // Original Author:  Giuseppe Cerati
 // reorganized by:   Domenico Giordano
 //         Created:  Wed Aug 19 15:39:10 CEST 2009
-// $Id: NewConversionNtuplizer.cc,v 1.12 2012/02/14 10:43:00 dinardo Exp $
+// $Id: NewConversionNtuplizer.cc,v 1.13 2012/02/14 10:52:48 dinardo Exp $
 //
 //
 
@@ -1084,7 +1084,13 @@ getStateAtVertex(const edm::RefToBase<reco::Track> &tk, float recoPhoR,float vtx
 								   SimpleDiskBounds( 0, recoPhoR, -0.001, 0.001)
 								   )
 						    );
-  const TrajectoryStateOnSurface myTSOS = transformer.innerStateOnSurface(*tk, *trackerGeom, magField);
+
+  //New/sguazz
+  const TrajectoryStateOnSurface myTSOS(trajectoryStateTransform::innerStateOnSurface(*tk, *trackerGeom, magField));
+
+  //Old/sguazz
+  //const TrajectoryStateOnSurface myTSOS = transformer.innerStateOnSurface(*tk, *trackerGeom, magField);
+
   TrajectoryStateOnSurface  stateAtVtx;
   if (prints) std::cout << " getStateAtVertex check  TSOS " << myTSOS.globalMomentum() << std::endl; 
   stateAtVtx = propag.propagate(myTSOS, *theBarrel_);
@@ -1135,7 +1141,7 @@ getConversionVertexPairs(const ConversionCollection* convColl){
     
     if (validVtx){
       if (prints) cout << "pushing vtx" << endl;
-      conversionVertices.push_back(make_pair<unsigned int,KinematicVertex>(conv-convColl->begin(),_kinematicVertex));
+      conversionVertices.push_back(std::make_pair((int)(conv-convColl->begin()),_kinematicVertex));
       //if (prints) cout << "converted photon with valid vertex at R=" << tv.position().perp() 
       //<< " pt=" << sqrt(photonMom.perp2())
       //<< endl;
@@ -1609,19 +1615,16 @@ bool NewConversionNtuplizer::checkSimToRecoAssociation(const edm::Event& iEvent,
     SimToRecoCollection q1 = theAssociator->associateSimToReco(tc1,tpc,&iEvent);
     SimToRecoCollection q2 = theAssociator->associateSimToReco(tc2,tpc,&iEvent);
     std::vector<std::pair<RefToBase<reco::Track>, double> > trackV1, trackV2;
-    int tp_1 = 0, tp_2 = 1;//the index of associated tp in tpc for two tracks
 
     if (q1.find(tpc[0])!=q1.end()){
       trackV1 = (std::vector<std::pair<RefToBase<reco::Track>, double> >) q1[tpc[0]];
     } else if (q1.find(tpc[1])!=q1.end()){
       trackV1 = (std::vector<std::pair<RefToBase<reco::Track>, double> >) q1[tpc[1]];
-      tp_1 = 1;
     }
     if (q2.find(tpc[1])!=q2.end()){
       trackV2 = (std::vector<std::pair<RefToBase<reco::Track>, double> >) q2[tpc[1]];
     } else if (q2.find(tpc[0])!=q2.end()){
       trackV2 = (std::vector<std::pair<RefToBase<reco::Track>, double> >) q2[tpc[0]];
-      tp_2 = 0;
     }
     if (!(trackV1.size()&&trackV2.size())) return false;
 
@@ -1661,8 +1664,8 @@ void NewConversionNtuplizer::fillS2R(const Conversion& conv,KinematicVertex& vtx
       //NOTE retracking should be set to False if reading conversions out of box because trajectory is not stored in RECO
       PTrajectoryStateOnDet state = tk[i]->seedRef()->startingState();
       DetId detId(state.detId());
-      TrajectoryStateOnSurface tsos = transformer.transientState( state, &(trackerGeom->idToDet(detId)->surface()), magField);
-      
+      TrajectoryStateOnSurface tsos(trajectoryStateTransform::transientState( state, &(trackerGeom->idToDet(detId)->surface()), magField));
+
       s2rbranch.seedLeg[i].q     = state.parameters().charge();	  
       s2rbranch.seedLeg[i].pt    = tsos.globalMomentum().perp();	  
       s2rbranch.seedLeg[i].phi   = tsos.globalMomentum().phi();	  
@@ -1683,7 +1686,7 @@ void NewConversionNtuplizer::fillS2R(const Conversion& conv,KinematicVertex& vtx
     if ((dataType == "MCRECO") || (dataType == "DATARECO"))
       {
 	float iphi = -999.;
-	GlobalVector ip = getStateAtVertex(tk[i],vtx.position().perp(),vtx.position().z(),iphi);
+	//	GlobalVector ip = getStateAtVertex(tk[i],vtx.position().perp(),vtx.position().z(),iphi);
 	s2rbranch.stateAtVertexLeg[i].phi = iphi;
 	
 	if (valid_pvtx) s2rbranch.recoLeg[i].d0 = - tk[i]->dxy(the_pvtx.position());
