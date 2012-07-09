@@ -38,8 +38,8 @@ process.GlobalTag.globaltag = "GR_R_44_V12::All"
 ### HLT trigger selection ###
 process.load("HLTrigger.HLTfilters.hltHighLevel_cfi")
 process.hltfilter = process.hltHighLevel.clone(
-#      HLTPaths = ["*"],
-      HLTPaths = ["HLT_ZeroBias_*"],
+      HLTPaths = ["*"],
+#      HLTPaths = ["HLT_ZeroBias_*"],
       andOr = True,  # False = and, True = or
       throw = False)
 
@@ -94,10 +94,7 @@ secFiles = cms.untracked.vstring()
 source = cms.Source ("PoolSource",fileNames = readFiles, secondaryFileNames = secFiles)
 #readFiles.extend( ['dummy.root']);
 readFiles.extend( [
-#      'file:/nfs/data36/cms/dinardo/MaterialStudies/myAOD_E033A79D-4D21-E111-B453-002618943970.root',
-#      'file:/nfs/data36/cms/dinardo/MaterialStudies/aod_182C7A8D-C411-E111-AB23-0026189438DD.root'
-      'file:/nfs/data36/cms/dinardo/MaterialStudies/reco_9288DF20-CEFC-E011-8962-003048678B8E.root'
-#      'file:/nfs/data36/cms/dinardo/MaterialStudies/Neutrino_Pt_2to20_gun_GEN-SIM-RECO_PU_S6-START44_V5-v1_0024B788-9A05-E111-9681-002481E1501E.root'
+      'file:/raid/sguazz/test/mc/QCD_Pt-15to30_TuneZ2_7TeV_pythia6__Fall11-PU_S6_START44_V5-v1__GEN-SIM-RECODEBUG.root'
       ] );
 ## secFiles.extend( [
 ##                ] )
